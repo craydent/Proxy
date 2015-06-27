@@ -7,6 +7,7 @@ net.createServer(function(source) {
     var lineBreakChar = '\r\n';
     console.log('server created');
     source.on('data',function(chunk){
+        this.destinations = this.destinations || [];
         if (!process.listeners('uncaughtException').length) {
             process.on('uncaughtException', function (err) {
                 console.log(err);
@@ -17,7 +18,7 @@ net.createServer(function(source) {
         var headers = chunk.toString('utf-8').split(lineBreakChar);
         var route = this.route;
         if (!route || headers.length > 1) {
-            this.destination = undefined;
+            this.destinations = [];
             route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
 
             var regex = new RegExp("/"+route+"/?(.*)");
@@ -45,13 +46,23 @@ net.createServer(function(source) {
             }
         }
 
-        if (!this.destination) {
-            this.destination = net.createConnection({
-                host: hub.routes[route].host,
-                port: hub.routes[route].port
-            });
-            this.destination.pipe(source);
+        if (!this.destinations.length) {
+            var hosts = hub.routes[route].host.split(','),
+                ports = hub.routes[route].port.split(','),
+                lhost = "", lport = "";
+            for (var i = 0, len = hosts.length; i < len; i++) {
+                lhost = hosts[i] || lhost;
+                lport = ports[i] || lport;
+                this.destinations.push(net.createConnection({
+                    host: lhost,
+                    port: lport
+                }));
+            }
+            this.destinations[0].pipe(source);
         }
-        this.destination.write(chunk);
+
+        for (var j = 0, jlen = this.destinations.length; j < jlen; j++) {
+            this.destinations[j].write(chunk);
+        }
     });
 }).listen(8080, "localhost");
