@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script>
+        function connect () {
+            var host = "ws://localhost:3000"
+            var connection = new WebSocket(host);
+
+            connection.onopen = function () {
+                console.log('connection open');
+            };
+
+            connection.onerror = function (error) {
+                console.log('error', error);
+            };
+
+            // most important part - incoming messages
+            connection.onmessage = function (message) {
+                console.log('message', message);
+            };
+        }
+        connect();
+    </script>
+</head>
+<body>
+
+</body>
+</html>
