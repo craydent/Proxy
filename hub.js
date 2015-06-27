@@ -47,8 +47,10 @@ net.createServer(function(source) {
         }
 
         if (!this.destinations.length) {
-            var hosts = hub.routes[route].host.split(','),
-                ports = hub.routes[route].port.split(','),
+            hub.routes[route].host = typeof hub.routes[route].host == "string" ? hub.routes[route].host.split(',') : hub.routes[route].host;
+            hub.routes[route].port = typeof hub.routes[route].port == "string" ? hub.routes[route].port.split(',') : hub.routes[route].port;
+            var hosts = hub.routes[route].host,
+                ports = hub.routes[route].port,
                 lhost = "", lport = "";
             for (var i = 0, len = hosts.length; i < len; i++) {
                 lhost = hosts[i] || lhost;
