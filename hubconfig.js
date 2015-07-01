@@ -2,7 +2,9 @@ global.DEFAULT_HTTP_PORT = 80;
 
 function Hosts() {
     var self = this;
-    this.routes;
+    self.routes = {};
+    self.port = 80;
+    self.host = "localhost";
 }
 var h = new Hosts();
 
