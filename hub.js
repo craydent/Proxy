@@ -1,13 +1,13 @@
 var net = require('net');
 
-function Hub(host, port, config) {
-    var hub = require(config || './hubconfig.js');
-    if (typeof host == "object") {
-        port = host.port;
-        host = host.host;
-    }
-    port = port || hub.port;
-    host = host || hub.host;
+function Hub(config) {
+    var hub;
+    try { hub = require(config || './hubconfig.js'); } catch (e) { }
+
+    hub = hub || config;
+    var port = hub.port;
+    var host = hub.host;
+    //hub.routes = routes || hub.routes;
     return net.createServer(function(source) {
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){
@@ -23,6 +23,30 @@ function Hub(host, port, config) {
             if (!route || headers.length > 1) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
+
+                if (route == "RELOAD_CONFIG") {
+                    var oldHub = hub;
+                    try {
+                        delete require.cache[config || './hubconfig.js'];
+                        hub = require(config || './hubconfig.js'); 
+                    } catch (e) {
+                        hub = oldHub;
+                    }
+                    finally {
+                        if (!hub.routes[route]) {
+                            var body = "{\"message\":\"Config reloaded\"}",
+                                response = [
+                                    "HTTP/1.1 200 OK",
+                                    "Content-Length: " + body.length,
+                                    "Connection: close",
+                                    "",
+                                    body
+                                ];
+                            source.write(response.join(lineBreakChar));
+                            return source.end();
+                        }
+                    }
+                }
 
                 var regex = new RegExp("/"+route+"/?(.*)");
                 var path = hub.routes[route] && hub.routes[route].path ? hub.routes[route].path : '/';
@@ -47,7 +71,16 @@ function Hub(host, port, config) {
             }
 
             if (!route) {
-                source.end();
+                var body = "{\"error\":true,\"message\":\"Request could not be understood.\"}",
+                    response = [
+                        "HTTP/1.1 400 Bad Request",
+                        "Content-Length: " + body.length,
+                        "Connection: close",
+                        "",
+                        body
+                    ];
+                source.write(response.join(lineBreakChar));
+                return source.end();
             }
 
             if (!this.destinations.length) {
