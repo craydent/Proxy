@@ -38,7 +38,23 @@ function Hub(config) {
                 if (route == "RELOAD_CONFIG") {
                     var oldHub = hub;
                     try {
-                        delete require.cache[config || './hubconfig.js'];
+                        //get absolute directory
+                        var absPath = config;
+                        if (typeof absPath == "string") {
+                            var dir = __dirname;
+                            var prefix = absPath.substring(0,2);
+                            if (prefix == "./") {
+                                absPath = absPath.substring(0,2);
+                            }
+                            while (prefix == "..") {
+                                dir = dir.substring(0,dir.lastIndexOf('/'));
+                                absPath = absPath.substring(3);
+                                
+                                prefix = absPath.substring(0,2);
+                            }
+                            absPath = dir + '/' + absPath;
+                        }
+                        delete require.cache[absPath || (__dirname + '/hubconfig.js')];
                         hub = require(config || './hubconfig.js'); 
                     } catch (e) {
                         hub = oldHub;
