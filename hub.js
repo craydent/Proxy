@@ -1,20 +1,31 @@
 var net = require('net');
 
 function Hub(config) {
-    var hub;
+    function foo(){}
+    
+    var hub, host, port, onConnect, onData, onError, onReload, onBind;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
-    hub = hub || config;
-    var port = hub.port;
-    var host = hub.host;
-    //hub.routes = routes || hub.routes;
+    hub = hub || config || {};
+    port = hub.port;
+    host = hub.host;
+    onConnect = hub.onRequest || foo;
+    onData = hub.onData || foo;
+    onError = hub.onError || foo;
+    onReload = hub.onReload || foo;
+    onBind = hub.onBind || foo;
+    
     return net.createServer(function(source) {
+        onConnect.call(hub, source);
+        
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){
+            onData.call(hub, chunk);
+            
             this.destinations = this.destinations || [];
             if (!process.listeners('uncaughtException').length) {
                 process.on('uncaughtException', function (err) {
-                    console.log(err);
+                    onError.call(hub, err);
                     source.end();
                 });
             }
@@ -34,6 +45,7 @@ function Hub(config) {
                     }
                     finally {
                         if (!hub.routes[route]) {
+                            onReload.call(hub, route);
                             var body = "{\"message\":\"Config reloaded\"}",
                                 response = [
                                     "HTTP/1.1 200 OK",
@@ -79,6 +91,7 @@ function Hub(config) {
                         "",
                         body
                     ];
+                onError(JSON.parse(body));
                 source.write(response.join(lineBreakChar));
                 return source.end();
             }
@@ -104,6 +117,6 @@ function Hub(config) {
                 this.destinations[j].write(chunk);
             }
         });
-    }).listen(port, host);
+    }).listen(port, host, onBind);
 }
 module.exports = Hub;
