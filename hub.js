@@ -1,31 +1,34 @@
-var net = require('net');
+var net = require('net'),
+    util = require("util"),
+    EventEmitter = require('events').EventEmitter;
 
 function Hub(config) {
-    function foo(){}
-    
-    var hub, host, port, onConnect, onData, onError, onReload, onBind;
+    var self = this, hub, host, port, onConnect, onData, onError, onReload, onBind;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
     hub = hub || config || {};
     port = hub.port;
     host = hub.host;
-    onConnect = hub.onRequest || foo;
-    onData = hub.onData || foo;
-    onError = hub.onError || foo;
-    onReload = hub.onReload || foo;
-    onBind = hub.onBind || foo;
+//    onConnect = hub.onRequest || foo;
+//    onData = hub.onData || foo;
+//    onError = hub.onError || foo;
+//    onReload = hub.onReload || foo;
+//    onBind = hub.onBind || foo;
     
     return net.createServer(function(source) {
-        onConnect.call(hub, source);
+        self.emit('connect', source);
+//        onConnect.call(hub, source);
         
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){
-            onData.call(hub, chunk);
+            self.emit('data', chunk);
+//            onData.call(hub, chunk);
             
             this.destinations = this.destinations || [];
             if (!process.listeners('uncaughtException').length) {
                 process.on('uncaughtException', function (err) {
-                    onError.call(hub, err);
+                    self.emit('error', err);
+//                    onError.call(hub, err);
                     source.end();
                 });
             }
@@ -61,7 +64,8 @@ function Hub(config) {
                     }
                     finally {
                         if (!hub.routes[route]) {
-                            onReload.call(hub, route);
+                            self.emit('reload', route);
+//                            onReload.call(hub, route);
                             var body = "{\"message\":\"Config reloaded\"}",
                                 response = [
                                     "HTTP/1.1 200 OK",
@@ -107,7 +111,8 @@ function Hub(config) {
                         "",
                         body
                     ];
-                onError(JSON.parse(body));
+                self.emit('error', JSON.parse(body));
+//                onError(JSON.parse(body));
                 source.write(response.join(lineBreakChar));
                 return source.end();
             }
@@ -133,6 +138,9 @@ function Hub(config) {
                 this.destinations[j].write(chunk);
             }
         });
-    }).listen(port, host, onBind);
+    }).listen(port, host, function () {
+        self.emit('bind', chunk);
+    });
 }
+util.inherits(Hub, EventEmitter);
 module.exports = Hub;
