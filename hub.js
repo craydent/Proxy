@@ -126,10 +126,22 @@ function Hub(config) {
                 for (var i = 0, len = hosts.length; i < len; i++) {
                     lhost = hosts[i] || lhost;
                     lport = ports[i] || lport;
-                    this.destinations.push(net.createConnection({
+                    var destination = net.createConnection({
                         host: lhost,
                         port: lport
-                    }));
+                    });
+                    destination.on('error',function(){
+                        source.end();
+                    });
+                    destination.on('close',function(isClosed){
+                        if (isClosed) {
+                            source.end();
+                        }
+                    });
+                    destination.on('timeout',function(){
+                        source.end();
+                    });
+                    this.destinations.push(destination);
                 }
                 this.destinations[0].pipe(source);
             }
