@@ -2,12 +2,18 @@ global.DEFAULT_HTTP_PORT = 80;
 
 function Hosts() {
     var self = this;
-    self.routes = {};
+    self.routes = {
+        "DEFAULT":{host:"localhost",port:8080},
+        "3010":{host:"localhost",port:3010},
+        "3012":{host:"localhost",port:3012},
+        "socket":{host:"localhost",port:3010},
+        "rest":{host:"localhost",port:3012},
+    };
     self.port = 80;
     self.host = "localhost";
 }
 var h = new Hosts();
-
+/*
 setTimeout(function(){
     h.routes = {
         "DEFAULT":{host:"localhost",port:80},
@@ -19,5 +25,5 @@ setTimeout(function(){
         "google":{host:"google.com",port:80}
     };
 
-},5000);
+},5000);*/
 module.exports = h;

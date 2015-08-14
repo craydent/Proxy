@@ -1,13 +1,16 @@
 var net = require('net');
 
-function Hub(host, port, config) {
-    var hub = require(config || './hubconfig.js');
-    if (typeof host == "object") {
-        port = host.port;
-        host = host.host;
+function Hub(config) {
+    var hub;
+    try {
+        hub = require(config || './hubconfig.js');
+    }catch(e){
+
     }
-    port = port || hub.port;
-    host = host || hub.host;
+    hub = config || hub;
+    var port = hub.port;
+    var host = hub.host;
+    //hub.routes = routes || hub.routes;
     return net.createServer(function(source) {
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){

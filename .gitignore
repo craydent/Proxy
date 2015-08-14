@@ -1,1 +1,6 @@
 # Created by .gitignore support plugin (hsz.mobi)
+_notes
+dwsync.xml
+.idea/
+node/node_modules/
+/.DS_Store
