@@ -1,23 +1,34 @@
-var net = require('net');
+var net = require('net'),
+    util = require("util"),
+    EventEmitter = require('events').EventEmitter;
 
 function Hub(config) {
-    var hub;
-    try {
-        hub = require(config || './hubconfig.js');
-    }catch(e){
+    var self = this, hub, host, port, onConnect, onData, onError, onReload, onBind;
+    try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
-    }
-    hub = config || hub;
-    var port = hub.port;
-    var host = hub.host;
-    //hub.routes = routes || hub.routes;
+    hub = hub || config || {};
+    port = hub.port;
+    host = hub.host;
+//    onConnect = hub.onRequest || foo;
+//    onData = hub.onData || foo;
+//    onError = hub.onError || foo;
+//    onReload = hub.onReload || foo;
+//    onBind = hub.onBind || foo;
+    
     return net.createServer(function(source) {
+        self.emit('connect', source);
+//        onConnect.call(hub, source);
+        
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){
+            self.emit('data', chunk);
+//            onData.call(hub, chunk);
+            
             this.destinations = this.destinations || [];
             if (!process.listeners('uncaughtException').length) {
                 process.on('uncaughtException', function (err) {
-                    console.log(err);
+                    self.emit('error', err);
+//                    onError.call(hub, err);
                     source.end();
                 });
             }
@@ -26,6 +37,48 @@ function Hub(config) {
             if (!route || headers.length > 1) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
+
+                if (route == "RELOAD_CONFIG") {
+                    var oldHub = hub;
+                    try {
+                        //get absolute directory
+                        var absPath = config;
+                        if (typeof absPath == "string") {
+                            var dir = __dirname;
+                            var prefix = absPath.substring(0,2);
+                            if (prefix == "./") {
+                                absPath = absPath.substring(0,2);
+                            }
+                            while (prefix == "..") {
+                                dir = dir.substring(0,dir.lastIndexOf('/'));
+                                absPath = absPath.substring(3);
+                                
+                                prefix = absPath.substring(0,2);
+                            }
+                            absPath = dir + '/' + absPath;
+                        }
+                        delete require.cache[absPath || (__dirname + '/hubconfig.js')];
+                        hub = require(config || './hubconfig.js'); 
+                    } catch (e) {
+                        hub = oldHub;
+                    }
+                    finally {
+                        if (!hub.routes[route]) {
+                            self.emit('reload', route);
+//                            onReload.call(hub, route);
+                            var body = "{\"message\":\"Config reloaded\"}",
+                                response = [
+                                    "HTTP/1.1 200 OK",
+                                    "Content-Length: " + body.length,
+                                    "Connection: close",
+                                    "",
+                                    body
+                                ];
+                            source.write(response.join(lineBreakChar));
+                            return source.end();
+                        }
+                    }
+                }
 
                 var regex = new RegExp("/"+route+"/?(.*)");
                 var path = hub.routes[route] && hub.routes[route].path ? hub.routes[route].path : '/';
@@ -50,7 +103,18 @@ function Hub(config) {
             }
 
             if (!route) {
-                source.end();
+                var body = "{\"error\":true,\"message\":\"Request could not be understood.\"}",
+                    response = [
+                        "HTTP/1.1 400 Bad Request",
+                        "Content-Length: " + body.length,
+                        "Connection: close",
+                        "",
+                        body
+                    ];
+                self.emit('error', JSON.parse(body));
+//                onError(JSON.parse(body));
+                source.write(response.join(lineBreakChar));
+                return source.end();
             }
 
             if (!this.destinations.length) {
@@ -62,10 +126,22 @@ function Hub(config) {
                 for (var i = 0, len = hosts.length; i < len; i++) {
                     lhost = hosts[i] || lhost;
                     lport = ports[i] || lport;
-                    this.destinations.push(net.createConnection({
+                    var destination = net.createConnection({
                         host: lhost,
                         port: lport
-                    }));
+                    });
+                    destination.on('error',function(){
+                        source.end();
+                    });
+                    destination.on('close',function(isClosed){
+                        if (isClosed) {
+                            source.end();
+                        }
+                    });
+                    destination.on('timeout',function(){
+                        source.end();
+                    });
+                    this.destinations.push(destination);
                 }
                 this.destinations[0].pipe(source);
             }
@@ -74,6 +150,9 @@ function Hub(config) {
                 this.destinations[j].write(chunk);
             }
         });
-    }).listen(port, host);
+    }).listen(port, host, function () {
+        self.emit('bind', chunk);
+    });
 }
+util.inherits(Hub, EventEmitter);
 module.exports = Hub;

@@ -1,0 +1,74 @@
+#!/bin/sh -e
+# Craydent LLC
+# Copyright 2011 
+# Dual licensed under the MIT or GPL Version 2 licenses.
+#
+# Author: Clark Inada
+
+cd /var/nodejs/hub;
+process_list=(
+    hub_main.js
+)
+list=$(echo ${process_list[@]}|tr " " "|")
+sudo ps aux|egrep "$list".*|awk '{print $2}'|xargs kill -9
+
+logBasePath="/var/log/nodejs/hub_main";
+sudo mkdir -p "$logBasePath/archive";
+
+cp "$logBasePath/hub_main.log" "$logBasePath/archive/hub_main.log.$(date +%F_%R)" &
+sudo nohup node hub_main.js > "$logBasePath/hub_main.log" &
+
+ps aux|egrep "$list".*
+
+case "$1" in
+    start)
+        echo -n "Starting Craydent Hub "
+        ## Start daemon with startproc(8). If this fails
+        ## the return value is set appropriately by startproc.
+        startproc $BAR_BIN
+
+        # Remember status and be verbose
+        rc_status -v
+        ;;
+    stop)
+        echo -n "Shutting down Craydent Hub "
+        ## Stop daemon with killproc(8) and if this fails
+        ## killproc sets the return value according to LSB.
+
+        killproc -TERM $BAR_BIN
+        ;;
+    restart)
+        ## Stop the service and regardless of whether it was
+        ## running or not, start it again.
+        $0 stop
+        $0 start
+
+        ;;
+    reload)
+
+        ;;
+    status)
+        echo -n "Checking for service bar "
+        ## Check status with checkproc(8), if process is running
+        ## checkproc will return with exit status 0.
+
+        # Return value is slightly different for the status command:
+        # 0 - service up and running
+        # 1 - service dead, but /var/run/  pid  file exists
+        # 2 - service dead, but /var/lock/ lock file exists
+        # 3 - service not running (unused)
+        # 4 - service status unknown :-(
+        # 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
+
+        # NOTE: checkproc returns LSB compliant status values.
+        checkproc $BAR_BIN
+        # NOTE: rc_status knows that we called this init script with
+        # "status" option and adapts its messages accordingly.
+        rc_status -v
+        ;;
+    *)
+        ## If no parameters are given, print which are avaiable.
+        echo "Usage: $0 {start|stop|status|restart|reload}"
+        exit 1
+        ;;
+esac
