@@ -151,7 +151,7 @@ function Hub(config) {
             }
         });
     }).listen(port, host, function () {
-        self.emit('bind', chunk);
+        self.emit('bind', {host:host, port:port});
     });
 }
 util.inherits(Hub, EventEmitter);
