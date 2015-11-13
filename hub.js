@@ -3,7 +3,7 @@ var net = require('net'),
     EventEmitter = require('events').EventEmitter;
 
 function Hub(config) {
-    var self = this, hub, host, port, onConnect, onData, onError, onReload, onBind;
+    var self = this, hub, host, port;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
     hub = _config_validator(hub || config);
@@ -79,7 +79,6 @@ function Hub(config) {
 
                 var regex = new RegExp("/"+route+"/?(.*)");
                 headers[0] = theRoute ? headers[0].replace(regex, theRoute.path + '$1') : headers[0];
-                chunk = new Buffer(headers.join(lineBreakChar));
             }
             if (!theRoute) {
                 route = 'DEFAULT';
@@ -97,6 +96,21 @@ function Hub(config) {
                     return source.end();
                 }
             }
+            if (hub.routes[route].headers) {
+                for (var i = 0, len = headers.length; i < len; i++) {
+                    var index = headers[i].indexOf(":"),
+                        head = headers[i].substr(0,index),
+                        headerVal = hub.routes[route].headers[head];
+
+                    if (headerVal == undefined) { continue; }
+
+                    if (headerVal.constructor == Function) {
+                        headerVal = headerVal(head,headers[i].substr(index + 1).trim(),headers[i]);
+                    }
+                    headers[i] = head + ": " + headerVal;
+                }
+            }
+            chunk = new Buffer(headers.join(lineBreakChar));
             this.route = route;
 
             var allow = theRoute.allow;
@@ -126,26 +140,35 @@ function Hub(config) {
                             "",
                             body
                         ];
-                    onError(JSON.parse(body));
+                    self.emit('error', JSON.parse(body));
                     source.write(response.join(lineBreakChar));
                     return source.end();
                 }
             }
             if (!this.destinations.length) {
                 var hosts = theRoute.host,
-                    ports = theRoute.port;
-                for (var i = 0, len = hosts.length; i < len; i++) {
+                    ports = theRoute.port,
+                    host, port;
+                for (var i = 0, len = Math.max(hosts.length,ports.length); i < len; i++) {
+                    host = hosts[i] || host;
+                    port = ports[i] || port;
                     var destination = net.createConnection({
-                        host: host[i],
-                        port: port[i]
-                    });
-                    destination.on('error',function(){
-                        source.end();
+                        host: host,
+                        port: port
                     });
                     destination.on('close',function(isClosed){
+                        self.emit('close', {"destination":destination,"had_error": isClosed});
                         if (isClosed) {
                             source.end();
                         }
+                    });
+                    destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
+                    destination.on('error',function(err){
+                        self.emit('error', {"destination":destination,"error": err});
+                        source.end();
+                    });
+                    destination.on('lookup',function(err,address,family){
+                        self.emit('lookup', {"destination":destination, error:err, address:address, family:family});
                     });
                     destination.on('timeout',function(){
                         source.end();
