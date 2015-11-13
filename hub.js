@@ -6,40 +6,36 @@ function Hub(config) {
     var self = this, hub, host, port, onConnect, onData, onError, onReload, onBind;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
-    hub = hub || config || {};
+    hub = _config_validator(hub || config);
     port = hub.port;
     host = hub.host;
-//    onConnect = hub.onRequest || foo;
-//    onData = hub.onData || foo;
-//    onError = hub.onError || foo;
-//    onReload = hub.onReload || foo;
-//    onBind = hub.onBind || foo;
     
-    return net.createServer(function(source) {
+    self.server = net.createServer(function(source) {
         self.emit('connect', source);
-//        onConnect.call(hub, source);
         
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){
             self.emit('data', chunk);
-//            onData.call(hub, chunk);
             
             this.destinations = this.destinations || [];
             if (!process.listeners('uncaughtException').length) {
                 process.on('uncaughtException', function (err) {
                     self.emit('error', err);
-//                    onError.call(hub, err);
                     source.end();
                 });
             }
             var headers = chunk.toString('utf-8').split(lineBreakChar);
-            var route = this.route;
+            var route = this.route,
+                theRoute = hub.routes[route];
             if (!route || headers.length > 1) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
-
+                theRoute = hub.routes[route];
+                
                 if (route == "RELOAD_CONFIG") {
-                    var oldHub = hub;
+                    var oldHub = hub,
+                        message = "{\"message\":\"Config reloaded\"}",
+                        status = "200 OK";
                     try {
                         //get absolute directory
                         var absPath = config;
@@ -58,17 +54,18 @@ function Hub(config) {
                             absPath = dir + '/' + absPath;
                         }
                         delete require.cache[absPath || (__dirname + '/hubconfig.js')];
-                        hub = require(config || './hubconfig.js'); 
+                        hub = _config_validator(require(config || './hubconfig.js')); 
                     } catch (e) {
                         hub = oldHub;
+                        message = "{\"message\":\"Failed to reload config\",\"error\":\""+e.toString()+"\"}";
+                        status = "500 Internal Server Error";
                     }
                     finally {
                         if (!hub.routes[route]) {
                             self.emit('reload', route);
-//                            onReload.call(hub, route);
-                            var body = "{\"message\":\"Config reloaded\"}",
+                            var body = message,
                                 response = [
-                                    "HTTP/1.1 200 OK",
+                                    "HTTP/1.1 " + status,
                                     "Content-Length: " + body.length,
                                     "Connection: close",
                                     "",
@@ -81,54 +78,66 @@ function Hub(config) {
                 }
 
                 var regex = new RegExp("/"+route+"/?(.*)");
-                var path = hub.routes[route] && hub.routes[route].path ? hub.routes[route].path : '/';
-                headers[0] = hub.routes[route] ? headers[0].replace(regex, path + '$1') : headers[0];
+                headers[0] = theRoute ? headers[0].replace(regex, theRoute.path + '$1') : headers[0];
                 chunk = new Buffer(headers.join(lineBreakChar));
             }
-            
-            this.route = route;
-            if (!hub.routes[route]) {
-                // retrieve the route via the referece
-                var refererRoute = (headers.filter(function(head){
-                    return head.toLowerCase().indexOf('referer: ') != -1;
-                })[0] || " ").split(' ')[1].replace(/https?:\/\/.*?\/(.*?)\/.*|\/(.*?)/,'$1');
-
-                //port = parseInt(refererPort);
-
-                //if (!port || port.toString().length != refererPort.length) {
-                if (!hub.routes[refererRoute]) {
-                    //port = DEFAULT_HTTP_PORT;
-                    this.route = route = 'DEFAULT';
+            if (!theRoute) {
+                route = 'DEFAULT';
+                if(!(theRoute = hub.routes[route])) {
+                    var body = "{\"error\":true,\"message\":\"Request could not be understood.\"}",
+                        response = [
+                            "HTTP/1.1 400 Bad Request",
+                            "Content-Length: " + body.length,
+                            "Connection: close",
+                            "",
+                            body
+                        ];
+                    self.emit('error', JSON.parse(body));
+                    source.write(response.join(lineBreakChar));
+                    return source.end();
                 }
             }
+            this.route = route;
 
-            if (!route) {
-                var body = "{\"error\":true,\"message\":\"Request could not be understood.\"}",
-                    response = [
-                        "HTTP/1.1 400 Bad Request",
-                        "Content-Length: " + body.length,
-                        "Connection: close",
-                        "",
-                        body
-                    ];
-                self.emit('error', JSON.parse(body));
-//                onError(JSON.parse(body));
-                source.write(response.join(lineBreakChar));
-                return source.end();
+            var allow = theRoute.allow;
+            if (allow && (allow.indexOf('*') != -1)) {
+                // retrieve referer
+                var referer = (headers.filter(function(head){
+                    return head.toLowerCase().indexOf('referer: ') != -1;
+                })[0] || " ").split(' ')[1].replace(/(?:https?:\/\/)?(.*?)/,'$1');
+                
+                var allowed = false;
+                if (referer) {
+                    if (typeof allow == "string") {
+                        allowed = new RegExp("^"+allow.replace(/\*/,'.*?').replace(/\./,'\\.') + "$").test(referer);
+                    } else {
+                        allowed = !!allow.filter(function(path){
+                            return new RegExp(path.replace(/\*/,'.*?').replace(/\./,'\\.')).test(referer);
+                        })[0];
+                    }
+                }
+                
+                if (!allowed) {
+                    var body = "{\"error\":true,\"message\":\"Forbidden.\"}",
+                        response = [
+                            "HTTP/1.1 403 Forbidden",
+                            "Content-Length: " + body.length,
+                            "Connection: close",
+                            "",
+                            body
+                        ];
+                    onError(JSON.parse(body));
+                    source.write(response.join(lineBreakChar));
+                    return source.end();
+                }
             }
-
             if (!this.destinations.length) {
-                hub.routes[route].host = typeof hub.routes[route].host == "string" ? hub.routes[route].host.split(',') : hub.routes[route].host;
-                hub.routes[route].port = typeof hub.routes[route].port == "object" ? hub.routes[route].port : hub.routes[route].port.toString().split(',');
-                var hosts = hub.routes[route].host,
-                    ports = hub.routes[route].port,
-                    lhost = "", lport = "";
+                var hosts = theRoute.host,
+                    ports = theRoute.port;
                 for (var i = 0, len = hosts.length; i < len; i++) {
-                    lhost = hosts[i] || lhost;
-                    lport = ports[i] || lport;
                     var destination = net.createConnection({
-                        host: lhost,
-                        port: lport
+                        host: host[i],
+                        port: port[i]
                     });
                     destination.on('error',function(){
                         source.end();
@@ -153,6 +162,44 @@ function Hub(config) {
     }).listen(port, host, function () {
         self.emit('bind', {host:host, port:port});
     });
+    return self;
+}
+function _config_validator (config) {
+    if (!config) { return { routes : {"DEFAULT":{host:"localhost",port:"8080"}}, port:"", host: ""}; }
+    var error = "";
+    config.routes = config.routes || {};
+    config.port = config.port || "";
+    config.host = config.host || "";
+    
+    var routes = config.routes;
+    for (var prop in routes) {
+        if (!routes.hasOwnProperty(prop)) { continue; }
+        var route = routes[prop];
+        // set defaults
+        route.path = route.path || "/";
+        route.host = typeof route.host == "string" ? route.host.split(',') : (route.host || ["localhost"]);
+        route.port = typeof route.port == "string" ? route.port.split(',') : (route.port || [""]);
+        route.allow = typeof route.allow == "string" ? route.allow.split(',') : (route.allow || ["*"]);
+        
+        // check for errors
+        if (typeof route.path != "string") {
+            error += "Error: 'path' must be a string in route: " + prop + "\n";
+        }
+        if (typeof route.host != "object" && route.host.length != undefined) {
+            error += "Error: 'host' must be a string or array in route: " + "\n";
+        }
+        if (typeof route.port != "object" && route.port.length != undefined) {
+            error += "Error: 'port' must be a string or array in route: " + "\n";
+        }
+        if (typeof route.allow != "object" && route.allow.length != undefined) {
+            error += "Error: 'allow' must be a string or array in route: " + "\n";
+        }
+        
+    }
+    if (error) {
+        throw error;
+    }
+    return config;
 }
 util.inherits(Hub, EventEmitter);
 module.exports = Hub;
