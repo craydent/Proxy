@@ -1,3 +1,10 @@
+/*/---------------------------------------------------------/*/
+/*/ Craydent LLC                                            /*/
+/*/	Copyright 2011 (http://craydent.com/about)              /*/
+/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
+/*/	(http://craydent.com/license)                           /*/
+/*/---------------------------------------------------------/*/
+
 global.DEFAULT_HTTP_PORT = 80;
 
 function Hosts() {

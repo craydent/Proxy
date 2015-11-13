@@ -1,3 +1,10 @@
+/*/---------------------------------------------------------/*/
+/*/ Craydent LLC                                            /*/
+/*/	Copyright 2011 (http://craydent.com/about)              /*/
+/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
+/*/	(http://craydent.com/license)                           /*/
+/*/---------------------------------------------------------/*/
+
 var net = require('net'),
     util = require("util"),
     EventEmitter = require('events').EventEmitter;
