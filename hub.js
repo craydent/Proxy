@@ -1,9 +1,16 @@
+/*/---------------------------------------------------------/*/
+/*/ Craydent LLC                                            /*/
+/*/	Copyright 2011 (http://craydent.com/about)              /*/
+/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
+/*/	(http://craydent.com/license)                           /*/
+/*/---------------------------------------------------------/*/
+
 var net = require('net'),
     util = require("util"),
     EventEmitter = require('events').EventEmitter;
 
 function Hub(config) {
-    var self = this, hub, host, port, onConnect, onData, onError, onReload, onBind;
+    var self = this, hub, host, port;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
     hub = _config_validator(hub || config);
@@ -79,7 +86,7 @@ function Hub(config) {
 
                 var regex = new RegExp("/"+route+"/?(.*)");
                 headers[0] = theRoute ? headers[0].replace(regex, theRoute.path + '$1') : headers[0];
-                //chunk = new Buffer(headers.join(lineBreakChar));
+                chunk = new Buffer(headers.join(lineBreakChar));
             }
             if (!theRoute) {
                 route = 'DEFAULT';
@@ -97,29 +104,30 @@ function Hub(config) {
                     return source.end();
                 }
             }
-            this.route = route;
-
             var rheaders = theRoute.headers;
             if (rheaders) {
                 var heads = [], i = 0;
                 for (var len = headers.length; i < len; i++) {
                     if (!headers[i]) { break; }
                     var index = headers[i].indexOf(":"),
-                        head = headers[i].substr(0,index);
-                    if (rheaders[head] == undefined) { continue; }
-                    heads.push(head);
-                    headers[i] = headers[i].substr(0,index) + ": " + rheaders[head];
+                        head = headers[i].substr(0,index),
+                        headerVal = rheaders[head];
+
+                    if (headerVal == undefined) { continue; }
+
+                    if (headerVal.constructor == Function) {
+                        headerVal = headerVal(head,headers[i].substr(index + 1).trim(),headers[i]);
+                    }
+                    headers[i] = head + ": " + headerVal;
                 }
                 for (var prop in rheaders) {
                     if (!rheaders.hasOwnProperty(prop) || heads.indexOf(prop) != -1) { continue; }
                     headers.splice(i,0,prop + ": " + rheaders[prop]);
                 }
-
-
-
             }
+            chunk = new Buffer(headers.join(lineBreakChar));
+            this.route = route;
 
-            needToChunk && (chunk = new Buffer(headers.join(lineBreakChar)));
             var allow = theRoute.allow;
             if (allow && (allow.indexOf('*') != -1)) {
                 // retrieve referer
@@ -147,26 +155,35 @@ function Hub(config) {
                             "",
                             body
                         ];
-                    onError(JSON.parse(body));
+                    self.emit('error', JSON.parse(body));
                     source.write(response.join(lineBreakChar));
                     return source.end();
                 }
             }
             if (!this.destinations.length) {
                 var hosts = theRoute.host,
-                    ports = theRoute.port;
-                for (var i = 0, len = hosts.length; i < len; i++) {
+                    ports = theRoute.port,
+                    host, port;
+                for (var i = 0, len = Math.max(hosts.length,ports.length); i < len; i++) {
+                    host = hosts[i] || host;
+                    port = ports[i] || port;
                     var destination = net.createConnection({
-                        host: hosts[i],
-                        port: ports[i]
-                    });
-                    destination.on('error',function(){
-                        source.end();
+                        host: host,
+                        port: port
                     });
                     destination.on('close',function(isClosed){
+                        self.emit('close', {"destination":destination,"had_error": isClosed});
                         if (isClosed) {
                             source.end();
                         }
+                    });
+                    destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
+                    destination.on('error',function(err){
+                        self.emit('error', {"destination":destination,"error": err});
+                        source.end();
+                    });
+                    destination.on('lookup',function(err,address,family){
+                        self.emit('lookup', {"destination":destination, error:err, address:address, family:family});
                     });
                     destination.on('timeout',function(){
                         source.end();
