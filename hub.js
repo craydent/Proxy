@@ -24,10 +24,11 @@ function Hub(config) {
                     source.end();
                 });
             }
-            var headers = chunk.toString('utf-8').split(lineBreakChar);
-            var route = this.route,
+            var headers = chunk.toString('utf-8').split(lineBreakChar),
+                route = this.route,
+                needToChunk = !route || headers.length > 1,
                 theRoute = hub.routes[route];
-            if (!route || headers.length > 1) {
+            if (noRoute) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
                 theRoute = hub.routes[route];
@@ -40,8 +41,8 @@ function Hub(config) {
                         //get absolute directory
                         var absPath = config;
                         if (typeof absPath == "string") {
-                            var dir = __dirname;
-                            var prefix = absPath.substring(0,2);
+                            var dir = __dirname,
+                                prefix = absPath.substring(0,2);
                             if (prefix == "./") {
                                 absPath = absPath.substring(0,2);
                             }
@@ -59,8 +60,7 @@ function Hub(config) {
                         hub = oldHub;
                         message = "{\"message\":\"Failed to reload config\",\"error\":\""+e.toString()+"\"}";
                         status = "500 Internal Server Error";
-                    }
-                    finally {
+                    } finally {
                         if (!hub.routes[route]) {
                             self.emit('reload', route);
                             var body = message,
@@ -79,7 +79,7 @@ function Hub(config) {
 
                 var regex = new RegExp("/"+route+"/?(.*)");
                 headers[0] = theRoute ? headers[0].replace(regex, theRoute.path + '$1') : headers[0];
-                chunk = new Buffer(headers.join(lineBreakChar));
+                //chunk = new Buffer(headers.join(lineBreakChar));
             }
             if (!theRoute) {
                 route = 'DEFAULT';
@@ -99,6 +99,27 @@ function Hub(config) {
             }
             this.route = route;
 
+            var rheaders = theRoute.headers;
+            if (rheaders) {
+                var heads = [], i = 0;
+                for (var len = headers.length; i < len; i++) {
+                    if (!headers[i]) { break; }
+                    var index = headers[i].indexOf(":"),
+                        head = headers[i].substr(0,index);
+                    if (rheaders[head] == undefined) { continue; }
+                    heads.push(head);
+                    headers[i] = headers[i].substr(0,index) + ": " + rheaders[head];
+                }
+                for (var prop in rheaders) {
+                    if (!rheaders.hasOwnProperty(prop) || heads.indexOf(prop) != -1) { continue; }
+                    headers.splice(i,0,prop + ": " + rheaders[prop]);
+                }
+
+
+
+            }
+
+            needToChunk && (chunk = new Buffer(headers.join(lineBreakChar)));
             var allow = theRoute.allow;
             if (allow && (allow.indexOf('*') != -1)) {
                 // retrieve referer
@@ -136,8 +157,8 @@ function Hub(config) {
                     ports = theRoute.port;
                 for (var i = 0, len = hosts.length; i < len; i++) {
                     var destination = net.createConnection({
-                        host: host[i],
-                        port: port[i]
+                        host: hosts[i],
+                        port: ports[i]
                     });
                     destination.on('error',function(){
                         source.end();
