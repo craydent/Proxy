@@ -13,7 +13,7 @@ function Hosts() {
     }|*/
     var self = this;
     self.routes = {
-        "DEFAULT":{host:"localhost",port:8080},
+        "DEFAULT":{host:"localhost",port:8000}/*,
         "route_path":{host:"",port:80},
         "route/with/all/possible/options/*" : {
             host:"",
@@ -21,7 +21,7 @@ function Hosts() {
             headers:{},
             allowed:"*",
             verbs:"get,post,put,delete"
-        }
+        }*/
         //"Key":{host:"(Array or String) host or domain we should forward to",port:3010/*Integer or Array of ports*/,path:"",headers:{}}
         /*
             Assume route is {"routeOne":{"host":"www.google.com",port:80,path:"/myRoute",headers:{"Header Name":"(String or Function) Overwrite Value"}}}
@@ -34,7 +34,7 @@ function Hosts() {
         */
     };
     self.port = 80;
-    self.host = "localhost";
+    self.host = "";
 }
 var h = new Hosts();
 
