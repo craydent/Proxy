@@ -36,7 +36,7 @@ function Hub(config) {
                 route = this.route,
                 needToChunk = !route || headers.length > 1,
                 theRoute = routes[route];
-            if (noRoute) {
+            if (needToChunk) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
                 // find the first matching route
@@ -104,7 +104,7 @@ function Hub(config) {
 
                 var regex = new RegExp("/"+route+"/?(.*)");
                 headers[0] = theRoute ? headers[0].replace(regex, theRoute.path + '$1') : headers[0];
-                chunk = new Buffer(headers.join(lineBreakChar));
+                //chunk = new Buffer(headers.join(lineBreakChar));
             }
             if (!theRoute) {
                 route = 'DEFAULT';
@@ -143,7 +143,7 @@ function Hub(config) {
                     headers.splice(i,0,prop + ": " + rheaders[prop]);
                 }
             }
-            chunk = new Buffer(headers.join(lineBreakChar));
+            needToChunk && (chunk = new Buffer(headers.join(lineBreakChar)));
             this.route = route;
 
             var allow = theRoute.allow;
