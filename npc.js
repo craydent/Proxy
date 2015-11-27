@@ -1,4 +1,4 @@
-var Hub = require('./hub.js');
+var Hub = require('./node/hub.js');
 
 var server = new Hub({
     routes: {

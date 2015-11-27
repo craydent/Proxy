@@ -10,12 +10,13 @@ var net = require('net'),
     EventEmitter = require('events').EventEmitter;
 
 function Hub(config) {
-    var self = this, hub, host, port;
+    var self = this, hub, host, port, routes;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
     hub = _config_validator(hub || config);
     port = hub.port;
     host = hub.host;
+    routes = hub.routes;
     
     self.server = net.createServer(function(source) {
         self.emit('connect', source);
@@ -34,11 +35,25 @@ function Hub(config) {
             var headers = chunk.toString('utf-8').split(lineBreakChar),
                 route = this.route,
                 needToChunk = !route || headers.length > 1,
-                theRoute = hub.routes[route];
+                theRoute = routes[route];
             if (noRoute) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
-                theRoute = hub.routes[route];
+                // find the first matching route
+                var path = headers[0].split(' ')[1];
+                for (var prop in routes) {
+                    if (prop.indexOf('*') != -1) {
+                        prop = prop.replace(/\*/g,'.*');
+                    }
+                    if (prop[0] == '/') {
+                        prop = prop.substr(1);
+                    }
+                    if(new RegExp("^/"+prop+"$").test(path)) {
+                        theRoute = routes[prop];
+                        break;
+                    }
+                }
+                theRoute = theRoute || routes[route];
                 
                 if (route == "RELOAD_CONFIG") {
                     var oldHub = hub,
@@ -62,13 +77,16 @@ function Hub(config) {
                             absPath = dir + '/' + absPath;
                         }
                         delete require.cache[absPath || (__dirname + '/hubconfig.js')];
-                        hub = _config_validator(require(config || './hubconfig.js')); 
+                        hub = _config_validator(require(config || './hubconfig.js'));
+                        port = hub.port;
+                        host = hub.host;
+                        routes = hub.routes;
                     } catch (e) {
                         hub = oldHub;
                         message = "{\"message\":\"Failed to reload config\",\"error\":\""+e.toString()+"\"}";
                         status = "500 Internal Server Error";
                     } finally {
-                        if (!hub.routes[route]) {
+                        if (!routes[route]) {
                             self.emit('reload', route);
                             var body = message,
                                 response = [
@@ -90,7 +108,7 @@ function Hub(config) {
             }
             if (!theRoute) {
                 route = 'DEFAULT';
-                if(!(theRoute = hub.routes[route])) {
+                if(!(theRoute = routes[route])) {
                     var body = "{\"error\":true,\"message\":\"Request could not be understood.\"}",
                         response = [
                             "HTTP/1.1 400 Bad Request",
