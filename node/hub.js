@@ -206,8 +206,7 @@ function Hub(config) {
                     });
                     destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
                     destination.on('error',function(err){
-                        console.log(err);
-                        self.emit('error', {"destination":destination,"error": err});
+                        self.emit('eerror', {"destination":destination,"error": err});
                         source.end();
                     });
                     destination.on('lookup',function(err,address,family){
