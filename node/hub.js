@@ -128,7 +128,7 @@ function Hub(config) {
                     source.write(response.join(lineBreakChar));
                     return source.end();
                 }
-                if (headers[0].indexOf("webconfig.js") != -1) {
+                if (true||headers[0].indexOf("webconfig.js") != -1) {
                     console.log("route: " + route);
                     console.log(headers);
                 }
