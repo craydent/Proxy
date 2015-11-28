@@ -128,10 +128,6 @@ function Hub(config) {
                     source.write(response.join(lineBreakChar));
                     return source.end();
                 }
-                if (true||headers[0].indexOf("webconfig.js") != -1) {
-                    console.log("route: " + route);
-                    console.log(headers);
-                }
             }
             this.route = route;
             var rheaders = theRoute.headers;
@@ -156,6 +152,13 @@ function Hub(config) {
                 }
             }
             needToChunk && (chunk = new Buffer(headers.join(lineBreakChar)));
+
+
+            if (true||headers[0].indexOf("webconfig.js") != -1) {
+                console.log("route: " + route);
+                console.log(headers);
+            }
+
             var allow = theRoute.allow;
             if (allow && (allow.indexOf('*') == -1)) {
                 // retrieve referer
