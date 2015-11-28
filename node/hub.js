@@ -32,7 +32,7 @@ function Hub(config) {
             if (!process.listeners('uncaughtException').length) {
                 console.log("listening for uncaught errors");
                 process.on('uncaughtException', function (err) {
-                    self.emit('error', err);
+                    if(self.listeners('error').length) { self.emit('error', err); }
                     source.end();
                 });
             }
@@ -126,7 +126,8 @@ function Hub(config) {
                             "",
                             body
                         ];
-                    self.emit('error', JSON.parse(body));
+                    if(self.listeners('error').length) { self.emit('error', JSON.parse(body)); }
+
                     source.write(response.join(lineBreakChar));
                     return source.end();
                 }
@@ -182,7 +183,8 @@ function Hub(config) {
                             "",
                             body
                         ];
-                    self.emit('error', JSON.parse(body));
+                    if(self.listeners('error').length) { self.emit('error', JSON.parse(body)); }
+
                     source.write(response.join(lineBreakChar));
                     return source.end();
                 }
@@ -206,7 +208,8 @@ function Hub(config) {
                     });
                     destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
                     destination.on('error',function(err){
-                        self.emit('eerror', {"destination":destination,"error": err});
+                        if(self.listeners('error').length) { self.emit('error', {"destination":destination,"error": err}); }
+
                         source.end();
                     });
                     destination.on('lookup',function(err,address,family){
