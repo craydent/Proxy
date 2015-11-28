@@ -39,7 +39,8 @@ function Hub(config) {
             var headers = chunk.toString('utf-8').split(lineBreakChar),
                 route = this.route,
                 needToChunk = !route || headers.length > 1,
-                theRoute = routes[route];
+                theRoute = routes[route],
+                useCurrentRoute = false;
             console.log("the route before need to chunk", theRoute);
             if (needToChunk) {
                 this.destinations = [];
@@ -54,12 +55,13 @@ function Hub(config) {
                         prop = prop.substr(1);
                     }
                     if(new RegExp("^/"+prop+"$").test(path)) {
+                        useCurrentRoute = true;
                         theRoute = routes[prop];
                         break;
                     }
                 }
-                console.log("the route after need to chunk", theRoute, route);
-                theRoute = theRoute || routes[route];
+                console.log("the route after need to chunk", theRoute, route, useCurrentRoute);
+                theRoute = useCurrentRoute ? theRoute : routes[route];
                 
                 if (route == "RELOAD_CONFIG") {
                     console.log("Reloading Config");
