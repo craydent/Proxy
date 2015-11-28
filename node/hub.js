@@ -40,6 +40,7 @@ function Hub(config) {
                 route = this.route,
                 needToChunk = !route || headers.length > 1,
                 theRoute = routes[route];
+            console.log("the route before need to chunk", theRoute);
             if (needToChunk) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
@@ -57,6 +58,7 @@ function Hub(config) {
                         break;
                     }
                 }
+                console.log("the route after need to chunk", theRoute, route);
                 theRoute = theRoute || routes[route];
                 
                 if (route == "RELOAD_CONFIG") {
