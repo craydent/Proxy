@@ -221,7 +221,6 @@ function Hub(config) {
     return self;
 }
 function _config_validator (config) {
-    console.log(config);
     if (!config) { return { routes : {"DEFAULT":{host:["localhost"],port:["8080"]}}, port:"80", host: ""}; }
     var error = "";
     config.routes = config.routes || {};
@@ -256,6 +255,7 @@ function _config_validator (config) {
     if (error) {
         throw error;
     }
+    console.log(config);
     return config;
 }
 util.inherits(Hub, EventEmitter);
