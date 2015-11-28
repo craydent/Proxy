@@ -156,7 +156,7 @@ function Hub(config) {
 
             if (true||headers[0].indexOf("webconfig.js") != -1) {
                 console.log("route: " + route);
-                console.log(headers);
+                console.log(headers, theRoute);
             }
 
             var allow = theRoute.allow;
