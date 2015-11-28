@@ -235,7 +235,7 @@ function _config_validator (config) {
         // set defaults
         route.path = route.path || "/";
         route.host = typeof route.host == "string" ? route.host.split(',') : (route.host || ["localhost"]);
-        route.port = typeof route.port == "string" || typeof route.port == "number" ? route.port.split(',') : (route.port || [""]);
+        route.port = typeof route.port == "string" || typeof route.port == "number" ? route.port.toString().split(',') : (route.port || [""]);
         route.allow = typeof route.allow == "string" ? route.allow.split(',') : (route.allow || ["*"]);
         
         // check for errors
