@@ -13,6 +13,8 @@ function Hub(config) {
     var self = this, hub, host, port, routes;
     try { hub = require(config || './hubconfig.js'); } catch (e) { }
 
+    console.log('hub initalized',hub);
+
     hub = _config_validator(hub || config);
     port = hub.port;
     host = hub.host;
@@ -21,6 +23,7 @@ function Hub(config) {
     self.server = net.createServer(function(source) {
         self.emit('connect', source);
         
+        console.log('connection established');
         var lineBreakChar = '\r\n';
         source.on('data',function(chunk){
             self.emit('data', chunk);
@@ -89,7 +92,7 @@ function Hub(config) {
                         status = "500 Internal Server Error";
                     } finally {
                         console.log(hub);
-                        if (!routes[route]) {
+                        if (!theRoute) {
                             self.emit('reload', route);
                             var body = message,
                                 response = [
@@ -106,7 +109,8 @@ function Hub(config) {
                 }
 
                 var regex = new RegExp("/"+route+"/?(.*)");
-                headers[0] = theRoute ? headers[0].replace(regex, theRoute.path + '$1') : headers[0];
+                var path = hub.routes[route] && hub.routes[route].path ? hub.routes[route].path : '/';
+                headers[0] = theRoute ? headers[0].replace(regex, path + '$1') : headers[0];
                 //chunk = new Buffer(headers.join(lineBreakChar));
             }
             if (!theRoute) {
@@ -125,6 +129,7 @@ function Hub(config) {
                     return source.end();
                 }
             }
+            this.route = route;
             var rheaders = theRoute.headers;
             if (rheaders) {
                 var heads = [], i = 0;
@@ -147,8 +152,6 @@ function Hub(config) {
                 }
             }
             needToChunk && (chunk = new Buffer(headers.join(lineBreakChar)));
-            this.route = route;
-
             var allow = theRoute.allow;
             if (allow && (allow.indexOf('*') == -1)) {
                 // retrieve referer
@@ -184,7 +187,7 @@ function Hub(config) {
             if (!this.destinations.length) {
                 var hosts = theRoute.host,
                     ports = theRoute.port,
-                    host, port;
+                    host = "", port = "";
                 for (var i = 0, len = Math.max(hosts.length,ports.length); i < len; i++) {
                     host = hosts[i] || host;
                     port = ports[i] || port;

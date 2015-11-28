@@ -13,7 +13,13 @@ function Hosts() {
     }|*/
     var self = this;
     self.routes = {
-        "DEFAULT":{host:"localhost",port:8000}/*,
+        "craydent_socket":{host:"localhost",port:4000},
+        "shapow_page":{host:"localhost",port:4100},
+        "shapow_rest":{host:"localhost",port:4300},
+        "shapow_include":{host:"localhost",port:4400},
+        "catnap_rest":{host:"localhost",port:5000},
+        "DEFAULT":{host:"localhost",port:8000}
+        /*,
         "route_path":{host:"",port:80},
         "route/with/all/possible/options/*" : {
             host:"",
