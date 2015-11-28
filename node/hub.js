@@ -147,8 +147,7 @@ function Hub(config) {
             this.route = route;
 
             var allow = theRoute.allow;
-            if (allow && (allow.indexOf('*') != -1)) {
-                console.log("here",allow);
+            if (allow && (allow.indexOf('*') == -1)) {
                 // retrieve referer
                 var referer = (headers.filter(function(head){
                     return head.toLowerCase().indexOf('referer: ') != -1;
