@@ -27,7 +27,7 @@ function Hub(config) {
             
             this.destinations = this.destinations || [];
             if (!process.listeners('uncaughtException').length) {
-                console.log("handling error");
+                console.log("listening for uncaught errors");
                 process.on('uncaughtException', function (err) {
                     self.emit('error', err);
                     source.end();
