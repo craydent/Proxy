@@ -221,6 +221,7 @@ function Hub(config) {
     return self;
 }
 function _config_validator (config) {
+    console.log(config);
     if (!config) { return { routes : {"DEFAULT":{host:["localhost"],port:["8080"]}}, port:"80", host: ""}; }
     var error = "";
     config.routes = config.routes || {};
@@ -250,7 +251,7 @@ function _config_validator (config) {
         if (typeof route.allow != "object" && route.allow.length != undefined) {
             error += "Error: 'allow' must be a string or array in route: " + "\n";
         }
-        
+        console.log(route);
     }
     if (error) {
         throw error;
