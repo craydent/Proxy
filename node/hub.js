@@ -185,7 +185,7 @@ function Hub(config) {
                 var hosts = theRoute.host,
                     ports = theRoute.port,
                     host, port;
-                console.log(Math.max(hosts.length,ports.length,"stuff");
+                console.log(Math.max(hosts.length,ports.length),"stuff");
                 for (var i = 0, len = Math.max(hosts.length,ports.length); i < len; i++) {
                     host = hosts[i] || host;
                     port = ports[i] || port;
