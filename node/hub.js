@@ -221,7 +221,8 @@ function Hub(config) {
     return self;
 }
 function _config_validator (config) {
-    if (!config) { return { routes : {"DEFAULT":{host:"localhost",port:"8080"}}, port:"", host: ""}; }
+    console.log(config);
+    if (!config) { return { routes : {"DEFAULT":{host:["localhost"],port:["8080"]}}, port:"80", host: ""}; }
     var error = "";
     config.routes = config.routes || {};
     config.port = config.port || "";
