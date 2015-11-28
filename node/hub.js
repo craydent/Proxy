@@ -88,6 +88,7 @@ function Hub(config) {
                         message = "{\"message\":\"Failed to reload config\",\"error\":\""+e.toString()+"\"}";
                         status = "500 Internal Server Error";
                     } finally {
+                        console.log(hub);
                         if (!routes[route]) {
                             self.emit('reload', route);
                             var body = message,
