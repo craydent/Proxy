@@ -14,6 +14,7 @@ function Hosts() {
     var self = this;
     self.routes = {
         "craydent_socket":{host:"localhost",port:4000},
+        "socket.io":{host:"localhost",port:4000,path:"/socket.io/"},
         "shapow_page":{host:"localhost",port:4100},
         "shapow_rest":{host:"localhost",port:4300},
         "shapow_include":{host:"localhost",port:4400},
