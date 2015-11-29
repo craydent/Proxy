@@ -19,7 +19,7 @@ function Hosts() {
         "shapow_rest":{host:"localhost",port:4300},
         "shapow_include":{host:"localhost",port:4400},
         "catnap_rest":{host:"localhost",port:5000},
-        "deploy":{host:"localhost",port:5100,path:"deploy"},
+        "deploy":{host:"localhost",port:4900,path:"deploy"},
         "DEFAULT":{host:"localhost",port:8000}
         /*,
         "route_path":{host:"",port:80},
