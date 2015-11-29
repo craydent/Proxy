@@ -20,7 +20,7 @@ function Hosts() {
         "shapow_include":{host:"localhost",port:4400},
         "catnap_rest":{host:"localhost",port:5000},
         "deploy":{host:"localhost",port:5100,path:"deploy"},
-        "deploy_socket":{host:"localhost",port:5100,path:"/socket.io/"},
+        "deploy_socket":{host:"localhost",port:5100},
         "DEFAULT":{host:"localhost",port:8000}
         /*,
         "route_path":{host:"",port:80},
