@@ -13,7 +13,7 @@ function Hosts() {
     }|*/
     var self = this;
     self.routes = {
-        "craydent_socket":{host:"localhost",port:4000},
+        "craydent_socket":{host:"localhost",port:4000,path:"craydent_socket"},
         "socket.io":{host:"localhost",port:4000,path:"/socket.io/"},
         "shapow_page":{host:"localhost",port:4100},
         "shapow_rest":{host:"localhost",port:4300},
