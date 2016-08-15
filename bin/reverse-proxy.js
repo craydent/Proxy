@@ -1,14 +1,21 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.0                               /*/
+/*/ Craydent LLC proxy-v0.1.1                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
 /*/---------------------------------------------------------/*/
 /*/---------------------------------------------------------/*/
-
+/* proxy params
+	1=>interpreter/node command (not used)
+	2=>node file being executed (not used)
+	3=>proxy port
+	4=>proxy host
+	5=>json string or file
+*/
 require('craydent/noConflict');
 require('shelljs/global');
+var fs = require('fs');
 
 var run = $c.yieldable(exec);
 
@@ -24,49 +31,60 @@ const rl = readline.createInterface({
 	output: process.stdout
 });
 $c.syncroit(function*() {
-	var question = $c.yieldable(rl.question, rl),
-		status, answer, ssh_file,
+	var question = $c.yieldable(rl.question, rl), answer,
 		yes = {yes: 1, y: 1},
-		no = {no: 1, n: 1},
-		routes = {};
-
-	var port = (yield question('What port should proxy run on? (80): ')) || 80;
-	var host = yield question('What host can access this proxy? (*): ');
+		no = {no: 1, n: 1};
 
 
-	answer = (yield question('Do you want to configure routes now? (yes): ')) || "yes";
-	while (answer in yes) {
-		var name = yield question('Provide a name for this route: ');
-		var rhost = (yield question('What host will this route be forwarding to? (localhost): ')) || "";
-		var rport = (yield question('What port will this route be forwarding to? (80): ')) || 80;
-		var rpath = yield question('What outfacing path relative to the domain? (/' + name + '): ');
 
-		var headers = {};
-		var hasHeaders = (yield question('Are there any headers to send with each request to this route? (no): ')) || "no";
-		while (hasHeaders in yes) {
-			var hname = yield question('What is the name of the header? ');
-			var hval = yield question('What is the value of the header? ');
-			headers[hname] = hval;
-			hasHeaders = (yield question('Do you want to add more headers? (yes): ')) || "yes";
+	var port = process.argv[2] || (yield question('What port should proxy run on? (80): ')) || 80;
+	var host = process.argv[3] && (process.argv[3] == "*" ? "" : process.argv[3]) || yield question('What host can access this proxy? (*): ');
+	var routes, content;
+	if (content = process.argv[3]) {
+		if (content.indexOf("{") != -1) {
+			// this is a file
+			content = fs.readFileSync(content, 'utf8');
+
 		}
-		var allowed = (yield question('What hosts can access this route? (*): ')) || "*";
-		var verbs = (yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete";
-
-		routes[name] = {
-			host: rhost,
-			port: rport,
-			verbs: verbs,
-			allow:allowed,
-			headers: headers,
-			path:rpath
-		};
-
-		answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
+		routes = $c.tryEval(content,JSON.parse);
+		if (!routes) { console.log('there is an issue with the json and cannot be parsed.'); }
 	}
 
+	if (!routes) {
+		answer = (yield question('Do you want to configure routes now? (yes): ')) || "yes";
+		while (answer in yes) {
+			var name = yield question('Provide a name for this route: ');
+			var rhost = (yield question('What host will this route be forwarding to? (localhost): ')) || "";
+			var rport = (yield question('What port will this route be forwarding to? (80): ')) || 80;
+			var rpath = yield question('What outfacing path relative to the domain? (/' + name + '): ');
+
+			var headers = {};
+			var hasHeaders = (yield question('Are there any headers to send with each request to this route? (no): ')) || "no";
+			while (hasHeaders in yes) {
+				var hname = yield question('What is the name of the header? ');
+				var hval = yield question('What is the value of the header? ');
+				headers[hname] = hval;
+				hasHeaders = (yield question('Do you want to add more headers? (yes): ')) || "yes";
+			}
+			var allowed = (yield question('What hosts can access this route? (*): ')) || "*";
+			var verbs = (yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete";
+
+			routes[name] = {
+				host: rhost,
+				port: rport,
+				verbs: verbs,
+				allow: allowed,
+				headers: headers,
+				path: rpath
+			};
+
+			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
+		}
+	}
 	var ncontent = JSON.stringify({host:host,port:port,routes:routes});
 
-	yield run("echo \"" + ncontent + "\" > " + __dirname + "/../pconfig.json;");
-	yield run(__dirname + "/craydent-proxy.sh " + __dirname + "/../;");
+	var dirpath = __dirname.replace('/bin','');
+	yield run("echo \"" + ncontent + "\" > " + dirpath + "/pconfig.json;");
+	yield run(__dirname + "/node_script.sh proxy \"index.js\" " + dirpath + ";");
 
 });
