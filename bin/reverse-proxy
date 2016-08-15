@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.2                               /*/
+/*/ Craydent LLC proxy-v0.1.3                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -38,7 +38,7 @@ $c.syncroit(function*() {
 
 
 	var port = process.argv[2] || (yield question('What port should proxy run on? (80): ')) || 80;
-	var host = process.argv[3] && (process.argv[3] == "*" ? "" : process.argv[3]) || yield question('What host can access this proxy? (*): ');
+	var host = process.argv[3] && (process.argv[3] == "*" ? "" : process.argv[3]) || (yield question('What host can access this proxy? (*): '));
 	var routes, content;
 	if (content = process.argv[3]) {
 		if (content.indexOf("{") != -1) {
