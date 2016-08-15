@@ -27,7 +27,7 @@ function Hosts() {
             host:"",
             port:80,
             headers:{},
-            allowed:"*",
+            allow:"*",
             verbs:"get,post,put,delete"
         }*/
         //"Key":{host:"(Array or String) host or domain we should forward to",port:3010/*Integer or Array of ports*/,path:"",headers:{}}

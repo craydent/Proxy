@@ -1,3 +1,1 @@
-var Proxy = require('./proxy.js');
-
-var server = new Proxy();
+new require('./proxy.js')();

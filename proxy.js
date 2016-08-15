@@ -45,7 +45,8 @@ function Proxy(config) {
                 route = this.route,
                 needToChunk = !route || headers.length > 1,
                 theRoute = routes[route],
-                useCurrentRoute = false;
+                useCurrentRoute = false,
+                method = (headers[0].split(' ')[0] || "").toLowerCase();
             if (needToChunk) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
@@ -137,8 +138,12 @@ function Proxy(config) {
             if (!theRoute) {
                 route = 'DEFAULT';
                 if(!(theRoute = routes[route])) {
-                    return _send(self,source, 400, {"error":true,"message":"Request could not be understood."});
+                    return _send(self,source, 400, $c.RESPONSES[400]);
                 }
+            }
+            var verbs = theRoute.verbs;
+            if (verbs && verbs.indexOf('*') != -1 && verbs.indexOf(method) == -1) {
+                return _send(self,source, 405, $c.RESPONSES[405]);
             }
             this.route = route;
             var rheaders = theRoute.headers;

@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash
 # Craydent LLC
 # Copyright 2011 
 # Dual licensed under the MIT or GPL Version 2 licenses.
@@ -16,7 +16,7 @@ logBasePath="/var/log/nodejs/hub_main";
 sudo mkdir -p "$logBasePath/archive";
 
 cp "$logBasePath/hub_main.log" "$logBasePath/archive/hub_main.log.$(date +%F_%R)" &
-sudo nohup node hub_main.js > "$logBasePath/hub_main.log" &
+sudo nohup node hub_main.js > "$logBasePath/hub_main.log" 2>&1 &
 
 ps aux|egrep "$list".*
 
