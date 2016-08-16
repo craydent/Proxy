@@ -18,6 +18,7 @@ $c.catchAll(function (err) {
 
 function Proxy(config) {
     var self = this, proxy, host, port, routes;
+    self.server = [];
     if (!config || $c.isString(config)) {
         config = $c.include(config || './pconfig.json');
     }
@@ -254,13 +255,13 @@ function Proxy(config) {
     host = $c.isArray(host) ? host : [host];
     var len = Math.max(port.length,host.length);
     for (var i = 0, pi = 0, hi = 0; i < len; i++) {
-        var p = port[pi], h = host[pi];
-        (function(host, port) {
-            self.server.push(net.createServer(server).listen(port, host, function () {
-                self.emit('bind', {host: host, port: port});
-                console.log('listening on port: ' + port);
+        var p = port[pi], h = host[hi];
+        (function(hh, pp) {
+            self.server.push(net.createServer(server).listen(pp, hh, function () {
+                self.emit('bind', {host: hh, port: pp});
+                console.log('listening on port: ' + pp);
             }));
-        })(p,h);
+        })(h,p);
         port[pi + 1] && pi++;
         host[hi + 1] && hi++;
     }
