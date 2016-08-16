@@ -46,12 +46,14 @@ function Proxy(config) {
                 needToChunk = !route || headers.length > 1,
                 theRoute = routes[route],
                 useCurrentRoute = false,
-                method = (headers[0].split(' ')[0] || "").toLowerCase();
+                _l1parts = headers[0].split(' '),
+                method = (_l1parts[0] || "").toLowerCase(),
+                req_path = (_l1parts[0] || "");
             if (needToChunk) {
                 this.destinations = [];
                 route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
                 // find the first matching route
-                var path = headers[0].split(' ')[1];
+                //var path = headers[0].split(' ')[1];
                 for (var prop in routes) {
                     if (prop.indexOf('*') != -1) {
                         prop = prop.replace(/\*/g,'.*');
@@ -59,7 +61,7 @@ function Proxy(config) {
                     if (prop[0] == '/') {
                         prop = prop.substr(1);
                     }
-                    if(new RegExp("^/"+prop+"$").test(path)) {
+                    if(new RegExp("^/"+prop+"$").test(req_path)) {
                         useCurrentRoute = true;
                         theRoute = routes[prop];
                         break;
@@ -135,14 +137,18 @@ function Proxy(config) {
                 headers[0] = theRoute ? headers[0].replace(regex, path + '$1') : headers[0];
                 //chunk = new Buffer(headers.join(lineBreakChar));
             }
+            var req_str = method.toUpperCase() + " " + req_path;
+            console.log("=>" + req_str);
             if (!theRoute) {
                 route = 'DEFAULT';
                 if(!(theRoute = routes[route])) {
+                    console.log("<=" + req_str + " 400 " + $c.RESPONSES[400]);
                     return _send(self,source, 400, $c.RESPONSES[400]);
                 }
             }
             var verbs = theRoute.verbs;
             if (verbs && verbs.indexOf('*') != -1 && verbs.indexOf(method) == -1) {
+                console.log("<=" + req_str + " 405 " + $c.RESPONSES[405]);
                 return _send(self,source, 405, $c.RESPONSES[405]);
             }
             this.route = route;
@@ -188,6 +194,7 @@ function Proxy(config) {
                 }
                 
                 if (!allowed) {
+                    console.log("<=" + req_str + " 403 " + $c.RESPONSES[403]);
                     return _send(self,source, 403, {"error":true,"message":"Forbidden."});
                 }
             }
@@ -211,15 +218,21 @@ function Proxy(config) {
                     destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
                     destination.on('error',function(err){
                         if(self.listeners('error').length) { self.emit('error', {"destination":destination,"error": err}); }
-
+                        console.log("<=" + req_str + " 500 " + $c.RESPONSES[500]);
                         source.end();
                     });
                     destination.on('lookup',function(err,address,family){
                         self.emit('lookup', {"destination":destination, error:err, address:address, family:family});
                     });
                     destination.on('timeout',function(){
+                        console.log("<=" + req_str + " 504 " + $c.RESPONSES[504]);
                         source.end();
                     });
+                    if (!this.destinations.length) {
+                        destination.on('end',function(){
+                            console.log("<=" + req_str + " 200 " + $c.RESPONSES[200]);
+                        });
+                    }
                     this.destinations.push(destination);
                 }
                 this.destinations[0].pipe(source);

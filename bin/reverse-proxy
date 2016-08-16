@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.4                               /*/
+/*/ Craydent LLC proxy-v0.1.5                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -83,10 +83,13 @@ $c.syncroit(function*() {
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
 		}
 	}
-	var ncontent = JSON.stringify({host:host,port:port,routes:routes}).replace("\"","\\\"");
+	var ncontent = JSON.stringify({host:host,port:port,routes:routes});//.replace("\"","\\\"");
 
 	var dirpath = __dirname.replace('/bin','');
-	yield run("echo \"" + ncontent + "\" > " + dirpath + "/pconfig.json;");
+	fs.writeFileSync(dirpath + "/pconfig.json",ncontent);
+	//yield run("echo \"" + ncontent + "\" > " + dirpath + "/pconfig.json;");
 	yield run(__dirname + "/node_script.sh proxy \"index.js\" " + dirpath + ";");
 
+	console.log("Complete");
+	process.exit();
 });
