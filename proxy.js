@@ -140,7 +140,7 @@ function Proxy(config) {
                 //chunk = new Buffer(headers.join(lineBreakChar));
             }
             var req_str = method.toUpperCase() + " " + req_path;
-            console.log("=>" + req_str + headers[0]);
+            console.log("=>" + headers[0]);
             if (!theRoute) {
                 var oroute = route;
                 route = 'DEFAULT';
