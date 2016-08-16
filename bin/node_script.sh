@@ -1,6 +1,6 @@
 #!/bin/bash
 #/*/---------------------------------------------------------/*/
-#/*/ Craydent LLC deploy-v0.1.3                              /*/
+#/*/ Craydent LLC deploy-v0.1.4                              /*/
 #/*/ Copyright 2011 (http://craydent.com/about)              /*/
 #/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 #/*/ (http://craydent.com/license)                           /*/
@@ -34,7 +34,7 @@ if [ -z "$4" ]; then
 
     for i in "${process_list[@]}"; do
         cp $logBasePath/$i.log "$logBasePath/archive/$i.log.$(date +%F_%R)";
-        nohup node $nodepath$i > "$logBasePath/$i.log" 2>&1 &
+        nohup node $nodepath/$i > "$logBasePath/$i.log" 2>&1 &
     done
 
     ps aux | egrep "$list".*;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.3                               /*/
+/*/ Craydent LLC proxy-v0.1.4                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -15,7 +15,8 @@
 */
 require('craydent/noConflict');
 require('shelljs/global');
-var fs = require('fs');
+const readline = require('readline');
+const fs = require('fs');
 
 var run = $c.yieldable(exec);
 
@@ -51,6 +52,7 @@ $c.syncroit(function*() {
 	}
 
 	if (!routes) {
+		routes = {};
 		answer = (yield question('Do you want to configure routes now? (yes): ')) || "yes";
 		while (answer in yes) {
 			var name = yield question('Provide a name for this route: ');
@@ -81,7 +83,7 @@ $c.syncroit(function*() {
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
 		}
 	}
-	var ncontent = JSON.stringify({host:host,port:port,routes:routes});
+	var ncontent = JSON.stringify({host:host,port:port,routes:routes}).replace("\"","\\\"");
 
 	var dirpath = __dirname.replace('/bin','');
 	yield run("echo \"" + ncontent + "\" > " + dirpath + "/pconfig.json;");
