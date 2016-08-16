@@ -27,14 +27,15 @@ function Proxy(config) {
     port = config.port;
     host = config.host;
     routes = config.routes;
-    
-    self.server = net.createServer(function(source) {
+    proxy = config;
+
+    var server = function(source) {
         $c.logit('connection established');
         self.emit('connect', source);
 
         source.on('data',function(chunk){
             self.emit('data', chunk);
-            
+
             this.destinations = this.destinations || [];
             !onerror && (onerror = function (err) {
                 if(self.listeners('error').length) { self.emit('error', err); }
@@ -68,30 +69,30 @@ function Proxy(config) {
                     }
                 }
                 theRoute = useCurrentRoute ? theRoute : routes[route];
-                
+
                 if (route == "RELOAD_CONFIG") {
                     /* TODO: implement http auth
-                    var auth = headers['authorization'],
-                        auth_header = 'WWW-Authenticate: Basic realm="Deployer Secure Area"';
+                     var auth = headers['authorization'],
+                     auth_header = 'WWW-Authenticate: Basic realm="Deployer Secure Area"';
 
-                    if (!auth) {     // No Authorization header was passed in so it's the first time the browser hit us
-                        self.header(auth_header);
-                        return source.end(401, '<html><body>You are trying to access a secure area.  Please login.</body></html>');
-                    }
+                     if (!auth) {     // No Authorization header was passed in so it's the first time the browser hit us
+                     self.header(auth_header);
+                     return source.end(401, '<html><body>You are trying to access a secure area.  Please login.</body></html>');
+                     }
 
-                    var encoded = auth.split(' ')[1];   // Split on a space, the original auth looks like  "Basic Y2hhcmxlczoxMjM0NQ==" and we need the 2nd part
+                     var encoded = auth.split(' ')[1];   // Split on a space, the original auth looks like  "Basic Y2hhcmxlczoxMjM0NQ==" and we need the 2nd part
 
-                    var buf = new Buffer(encoded, 'base64'),
-                        plain_auth = buf.toString(),
-                        creds = plain_auth.split(':'),
-                        username = creds[0],
-                        password = creds[1];
+                     var buf = new Buffer(encoded, 'base64'),
+                     plain_auth = buf.toString(),
+                     creds = plain_auth.split(':'),
+                     username = creds[0],
+                     password = creds[1];
 
-                    if (username != $g.HTTP_AUTH_USERNAME || password != $c.HTTP_AUTH_PASSWORD) {
-                        self.header(auth_header);
-                        // res.statusCode = 403;   // or alternatively just reject them altogether with a 403 Forbidden
-                        self.end(401, '<html><body>You are not authorized to access this page</body></html>');
-                    }*/
+                     if (username != $g.HTTP_AUTH_USERNAME || password != $c.HTTP_AUTH_PASSWORD) {
+                     self.header(auth_header);
+                     // res.statusCode = 403;   // or alternatively just reject them altogether with a 403 Forbidden
+                     self.end(401, '<html><body>You are not authorized to access this page</body></html>');
+                     }*/
 
                     $c.logit("Reloading Config");
                     var oldProxy = proxy,
@@ -109,7 +110,7 @@ function Proxy(config) {
                             while (prefix == "..") {
                                 dir = dir.substring(0,dir.lastIndexOf('/'));
                                 absPath = absPath.substring(3);
-                                
+
                                 prefix = absPath.substring(0,2);
                             }
                             absPath = dir + '/' + absPath;
@@ -138,17 +139,23 @@ function Proxy(config) {
                 //chunk = new Buffer(headers.join(lineBreakChar));
             }
             var req_str = method.toUpperCase() + " " + req_path;
-            console.log("=>" + req_str);
+            console.log("=>" + req_str + headers[0]);
             if (!theRoute) {
+                var oroute = route;
                 route = 'DEFAULT';
                 if(!(theRoute = routes[route])) {
-                    console.log("<=" + req_str + " 400 " + $c.RESPONSES[400]);
-                    return _send(self,source, 400, $c.RESPONSES[400]);
+                    if (headers.indexOf('User-Agent: ELB-HealthChecker/1.0') != -1) {
+                        console.log("<=" + req_str + " 200 " + $c.RESPONSES[200].message);
+                        return _send(self, source, 200, $c.RESPONSES[200]);
+                    } else {
+                        console.log("<=" + req_str + " 400 " + $c.RESPONSES[400].message);
+                        return _send(self, source, 400, $c.RESPONSES[400]);
+                    }
                 }
             }
             var verbs = theRoute.verbs;
             if (verbs && verbs.indexOf('*') != -1 && verbs.indexOf(method) == -1) {
-                console.log("<=" + req_str + " 405 " + $c.RESPONSES[405]);
+                console.log("<=" + req_str + " 405 " + $c.RESPONSES[405].message);
                 return _send(self,source, 405, $c.RESPONSES[405]);
             }
             this.route = route;
@@ -181,7 +188,7 @@ function Proxy(config) {
                 var referer = (headers.filter(function(head){
                     return head.toLowerCase().indexOf('referer: ') != -1;
                 })[0] || " ").split(' ')[1].replace(/(?:https?:\/\/)?(.*?)/,'$1');
-                
+
                 var allowed = false;
                 if (referer) {
                     if (typeof allow == "string") {
@@ -192,10 +199,10 @@ function Proxy(config) {
                         })[0];
                     }
                 }
-                
+
                 if (!allowed) {
-                    console.log("<=" + req_str + " 403 " + $c.RESPONSES[403]);
-                    return _send(self,source, 403, {"error":true,"message":"Forbidden."});
+                    console.log("<=" + req_str + " 403 " + $c.RESPONSES[403].message);
+                    return _send(self,source, 403,$c.RESPONSES[403]);
                 }
             }
             if (!this.destinations.length) {
@@ -218,19 +225,19 @@ function Proxy(config) {
                     destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
                     destination.on('error',function(err){
                         if(self.listeners('error').length) { self.emit('error', {"destination":destination,"error": err}); }
-                        console.log("<=" + req_str + " 500 " + $c.RESPONSES[500]);
+                        console.log("<=" + req_str + " 500 " + $c.RESPONSES[500].message);
                         source.end();
                     });
                     destination.on('lookup',function(err,address,family){
                         self.emit('lookup', {"destination":destination, error:err, address:address, family:family});
                     });
                     destination.on('timeout',function(){
-                        console.log("<=" + req_str + " 504 " + $c.RESPONSES[504]);
+                        console.log("<=" + req_str + " 504 " + $c.RESPONSES[504].message);
                         source.end();
                     });
                     if (!this.destinations.length) {
                         destination.on('end',function(){
-                            console.log("<=" + req_str + " 200 " + $c.RESPONSES[200]);
+                            console.log("<=" + req_str + " 200 " + $c.RESPONSES[200].message);
                         });
                     }
                     this.destinations.push(destination);
@@ -242,13 +249,25 @@ function Proxy(config) {
                 this.destinations[j].write(chunk);
             }
         });
-    }).listen(port, host, function () {
-        self.emit('bind', {host:host, port:port});
-    });
+    };
+    port = $c.isArray(port) ? port : [port];
+    host = $c.isArray(host) ? host : [host];
+    var len = Math.max(port.length,host.length);
+    for (var i = 0, pi = 0, hi = 0; i < len; i++) {
+        var p = port[pi], h = host[pi];
+        (function(host, port) {
+            self.server.push(net.createServer(server).listen(port, host, function () {
+                self.emit('bind', {host: host, port: port});
+                console.log('listening on port: ' + port);
+            }));
+        })(p,h);
+        port[pi + 1] && pi++;
+        host[hi + 1] && hi++;
+    }
     return self;
 }
 function _send (self, source, statusCode, data) {
-    var body = JSON.parse(data),
+    var body = $c.isString(data) ? data : JSON.stringify(data),
         response = [
             "HTTP/1.1 " + $c.RESPONSES[statusCode].status + " " + $c.RESPONSES[statusCode].message,
             "Content-Length: " + body.length,

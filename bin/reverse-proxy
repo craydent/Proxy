@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.5                               /*/
+/*/ Craydent LLC proxy-v0.1.6                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -22,7 +22,7 @@ var run = $c.yieldable(exec);
 
 if($c.include('../pconfig')) {
 	return $c.syncroit(function*(){
-		yield run(__dirname + "/craydent-proxy.sh " + __dirname + "/../;");
+		yield run(__dirname + "/node_script.sh proxy \"index.js\" " + __dirname.replace('/bin','') + ";");
 		process.exit();
 	});
 }
@@ -38,8 +38,12 @@ $c.syncroit(function*() {
 
 
 
-	var port = process.argv[2] || (yield question('What port should proxy run on? (80): ')) || 80;
-	var host = process.argv[3] && (process.argv[3] == "*" ? "" : process.argv[3]) || (yield question('What host can access this proxy? (*): '));
+	var port = (process.argv[2] || (yield question('What port should proxy run on? (80): ')) || 80).toString().split(',');
+	var host = (process.argv[3] && (process.argv[3] == "*" ? "" : process.argv[3]) || (yield question('What host can access this proxy? (*): '))).split(',');
+
+	host.map(function(h){ return parseInt(h); });
+	port.map(function(p){ return parseInt(p); });
+
 	var routes, content;
 	if (content = process.argv[3]) {
 		if (content.indexOf("{") != -1) {
