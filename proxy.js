@@ -84,29 +84,6 @@ function Proxy(config) {
                 theRoute = useCurrentRoute ? theRoute : $c.getProperty(routes,fqdn + "**" + route,"**");
                 $c.logit(theRoute);
                 if (req_path == "RELOAD_CONFIG") {
-                    /* TODO: implement http auth
-                     var auth = headers['authorization'],
-                     auth_header = 'WWW-Authenticate: Basic realm="Deployer Secure Area"';
-
-                     if (!auth) {     // No Authorization header was passed in so it's the first time the browser hit us
-                     self.header(auth_header);
-                     return source.end(401, '<html><body>You are trying to access a secure area.  Please login.</body></html>');
-                     }
-
-                     var encoded = auth.split(' ')[1];   // Split on a space, the original auth looks like  "Basic Y2hhcmxlczoxMjM0NQ==" and we need the 2nd part
-
-                     var buf = new Buffer(encoded, 'base64'),
-                     plain_auth = buf.toString(),
-                     creds = plain_auth.split(':'),
-                     username = creds[0],
-                     password = creds[1];
-
-                     if (username != $g.HTTP_AUTH_USERNAME || password != $c.HTTP_AUTH_PASSWORD) {
-                     self.header(auth_header);
-                     // res.statusCode = 403;   // or alternatively just reject them altogether with a 403 Forbidden
-                     self.end(401, '<html><body>You are not authorized to access this page</body></html>');
-                     }*/
-
                     $c.logit("Reloading Config");
                     var oldProxy = proxy,
                         message = {"message":"Config reloaded"},
@@ -167,6 +144,29 @@ function Proxy(config) {
             if (verbs && verbs.indexOf('*') != -1 && verbs.indexOf(method) == -1) {
                 console.log("<=" + headers[0] + " 405 " + $c.RESPONSES[405].message);
                 return _send(self,source, 405, $c.RESPONSES[405]);
+            }
+            if (theRoute.http_auth) {
+                var authHeaderString = headers.filter(function(line){ return $c.startsWith(line.toLowerCase(),'authorization'); })[0],
+                    auth = authHeaderString ? authHeaderString.replace(/^authorization\s*:\s*(.*)$/i,'$1') : "",
+                    auth_header = {'WWW-Authenticate: Basic realm': theRoute.domain + 'Secure Area'};
+
+                if (!auth) {     // No Authorization header was passed in so it's the first time the browser hit us
+                    var body = '<html><body>You are trying to access a secure area.  Please login.</body></html>';
+                    return _send(self, source, 401, body, auth_header);
+                }
+
+                var encoded = auth.split(' ')[1];   // Split on a space, the original auth looks like  "Basic Y2hhcmxlczoxMjM0NQ==" and we need the 2nd part
+
+                var buf = new Buffer(encoded, 'base64'),
+                    plain_auth = buf.toString(),
+                    creds = plain_auth.split(':'),
+                    username = creds[0],
+                    password = creds[1];
+
+                if (username != theRoute.http_username || password != theRoute.http_password) {
+                    var body = '<html><body>You are not authorized to access this page</body></html>';
+                    return _send(self, source, 401, body, auth_header);
+                }
             }
             this.route = route;
             var rheaders = theRoute.headers;
@@ -276,15 +276,27 @@ function Proxy(config) {
     }
     return self;
 }
-function _send (self, source, statusCode, data) {
+function _send (self, source, statusCode, data, headers) {
+    headers = headers || {};
+    var harray = [];
+    if ($c.isObject(headers)) {
+        for (var prop in headers) {
+            if (!headers.hasOwnProperty(prop)) { continue; }
+            harray.push(prop + ": " + headers[prop]);
+        }
+        headers = harray;
+    }
     var body = $c.isString(data) ? data : JSON.stringify(data),
-        response = [
-            "HTTP/1.1 " + $c.RESPONSES[statusCode].status + " " + $c.RESPONSES[statusCode].message,
-            "Content-Length: " + body.length,
-            "Connection: close",
-            "",
-            body
-        ];
+        response = ["HTTP/1.1 " + $c.RESPONSES[statusCode].status + " " + $c.RESPONSES[statusCode].message]
+    if (headers.length) {
+        response = response.concat(headers);
+    }
+    response = response.concat([
+        "Content-Length: " + body.length,
+        "Connection: close",
+        "",
+        body
+    ]);
     if(self.listeners('error').length) { self.emit('error', data); }
 
     source.write(response.join(lineBreakChar));

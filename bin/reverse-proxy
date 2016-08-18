@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.15                              /*/
+/*/ Craydent LLC proxy-v0.1.16                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -65,6 +65,13 @@ $c.syncroit(function*() {
 			var rpathdestination = (yield question('What path will this route be forwarding to? (/): ')) || '/';
 			var rpathreq = (yield question('What outfacing path relative to the domain? (/): ')) || '/';
 
+			var enableAuth = (yield question('Dp upi wamt to enable HTTP Basic Authentication? (no): ')) in yes,
+				auth_username, auth_password;
+
+			if (enableAuth) {
+				auth_username = (yield question('What is the username? (admin): ')) || 'admin';
+				auth_password = (yield question('What is the password? (admin): ')) || 'admin';
+			}
 			var headers = {};
 			var hasHeaders = (yield question('Are there any headers to overwrite with each request to this route? (no): ')) || "no";
 			while (hasHeaders in yes) {
@@ -84,7 +91,11 @@ $c.syncroit(function*() {
 				allow: allowed,
 				headers: headers,
 				path: rpathdestination,
-				request_path: rpathreq
+				request_path: rpathreq,
+				domain: domain,
+				http_auth: enableAuth,
+				http_username: auth_username,
+				http_password: auth_password
 			};
 
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
