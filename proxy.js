@@ -67,7 +67,7 @@ function Proxy(config) {
                 $c.logit(route,'route in needToChunk');
                 // find the first matching route
                 for (var prop in routes[fqdn]) {
-                    var path = routes[fqdn][prop].path;
+                    var path = prop;
                     if (path.indexOf('*') != -1) {
                         path = path.replace(/\*/g,'.*');
                     }
@@ -77,7 +77,6 @@ function Proxy(config) {
                     if(new RegExp("^"+path+"$").test(route)) {
                         useCurrentRoute = true;
                         theRoute = $c.getProperty(routes,fqdn + "**" + prop,"**");
-                        //route = prop;
                         break;
                     }
                 }
@@ -125,7 +124,7 @@ function Proxy(config) {
 
                 var regex = new RegExp(route + "/?(.*)");
                 var path = $c.getProperty(routes,fqdn + "**" + route + "**path","**") || '/';
-                headers[0] = theRoute ? headers[0].replace(regex, path + '$1') : headers[0];
+                headers[0] = theRoute ? headers[0].replace(theRoute.request_path || path, path) : headers[0];
             }
             console.log("=>" + headers[0]);
             if (!theRoute) {
