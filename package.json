@@ -1,6 +1,6 @@
 {
   "name": "@craydent/craydent-proxy",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Proxy service in node",
   "main": "index.js",
   "scripts": {
