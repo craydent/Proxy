@@ -13,21 +13,24 @@ var net = require('net'),
     lineBreakChar = '\r\n', onerror;
 
 $c.catchAll(function (err) {
+    console.error(err, err.stack);
     onerror && onerror(err);
 });
 
 function Proxy(config) {
-    var self = this, proxy, host, port, routes;
+    var self = this, proxy, host, port, routes, route_default;
     self.server = [];
     if (!config || $c.isString(config)) {
         config = $c.include(config || './pconfig.json');
     }
-    $c.logit('proxy initalized', config);
+    console.log('proxy initalized');
+    $c.logit(config);
 
     config = _config_validator(config);
     port = config.port;
     host = config.host;
     routes = config.routes;
+    route_default = config.DEFAULT;
     proxy = config;
 
     var server = function(source) {
@@ -40,38 +43,47 @@ function Proxy(config) {
             this.destinations = this.destinations || [];
             !onerror && (onerror = function (err) {
                 if(self.listeners('error').length) { self.emit('error', err); }
-                source.end();
+                return _send(self, source, 500, $c.RESPONSES[500]);
             });
 
             var headers = chunk.toString('utf-8').split(lineBreakChar),
                 route = this.route,
+                fqdnheader = headers.filter(function(line){ return $c.startsWith(line.toLowerCase(),'host'); })[0],
+                fqdn = fqdnheader ? fqdnheader.replace(/^host\s*:\s*(.*)$/i,'$1') : "",
                 needToChunk = !route || headers.length > 1,
-                theRoute = routes[route],
+                theRoute = route == "DEFAULT" ? route_default : $c.getProperty(routes,fqdn + "**" + route,'**'),
                 useCurrentRoute = false,
                 _l1parts = headers[0].split(' '),
                 method = (_l1parts[0] || "").toLowerCase(),
-                req_path = (_l1parts[0] || "");
+                req_path = (_l1parts[1] || "").replace(/index.html$/i,'');
+            $c.logit(req_path,fqdn,route,theRoute,routes[fqdn],routes);// / deploy.craydentbridge.com undef undef
             if (needToChunk) {
                 this.destinations = [];
-                route = headers[0].split(' ')[1].replace(/\/(.*?)\/.*|\/(.*?)/,'$1');
+                var pathparts = req_path.split('/');
+                route = "/";
+                if (pathparts[1]) {
+                    route = pathparts.slice(0,2).join('/');
+                }
+                $c.logit(route,'route in needToChunk');
                 // find the first matching route
-                //var path = headers[0].split(' ')[1];
-                for (var prop in routes) {
-                    if (prop.indexOf('*') != -1) {
-                        prop = prop.replace(/\*/g,'.*');
+                for (var prop in routes[fqdn]) {
+                    var path = routes[fqdn][prop].path;
+                    if (path.indexOf('*') != -1) {
+                        path = path.replace(/\*/g,'.*');
                     }
-                    if (prop[0] == '/') {
-                        prop = prop.substr(1);
+                    if (path[0] != '/') {
+                        path = "/" + path;
                     }
-                    if(new RegExp("^/"+prop+"$").test(req_path)) {
+                    if(new RegExp("^"+path+"$").test(route)) {
                         useCurrentRoute = true;
-                        theRoute = routes[prop];
+                        theRoute = $c.getProperty(routes,fqdn + "**" + prop,"**");
+                        //route = prop;
                         break;
                     }
                 }
-                theRoute = useCurrentRoute ? theRoute : routes[route];
-
-                if (route == "RELOAD_CONFIG") {
+                theRoute = useCurrentRoute ? theRoute : $c.getProperty(routes,fqdn + "**" + route,"**");
+                $c.logit(theRoute);
+                if (req_path == "RELOAD_CONFIG") {
                     /* TODO: implement http auth
                      var auth = headers['authorization'],
                      auth_header = 'WWW-Authenticate: Basic realm="Deployer Secure Area"';
@@ -134,29 +146,26 @@ function Proxy(config) {
                     }
                 }
 
-                var regex = new RegExp("/"+route+"/?(.*)");
-                var path = proxy.routes[route] && proxy.routes[route].path ? proxy.routes[route].path : '/';
+                var regex = new RegExp(route + "/?(.*)");
+                var path = $c.getProperty(routes,fqdn + "**" + route + "**path","**") || '/';
                 headers[0] = theRoute ? headers[0].replace(regex, path + '$1') : headers[0];
-                //chunk = new Buffer(headers.join(lineBreakChar));
             }
-            var req_str = method.toUpperCase() + " " + req_path;
             console.log("=>" + headers[0]);
             if (!theRoute) {
-                var oroute = route;
                 route = 'DEFAULT';
-                if(!(theRoute = routes[route])) {
+                if(!(theRoute = route_default)) {
                     if (headers.indexOf('User-Agent: ELB-HealthChecker/1.0') != -1) {
-                        console.log("<=" + req_str + " 200 " + $c.RESPONSES[200].message);
+                        console.log("<=" + headers[0] + " 200 " + $c.RESPONSES[200].message);
                         return _send(self, source, 200, $c.RESPONSES[200]);
                     } else {
-                        console.log("<=" + req_str + " 400 " + $c.RESPONSES[400].message);
+                        console.log("<=" + headers[0] + " 400 " + $c.RESPONSES[400].message);
                         return _send(self, source, 400, $c.RESPONSES[400]);
                     }
                 }
             }
             var verbs = theRoute.verbs;
             if (verbs && verbs.indexOf('*') != -1 && verbs.indexOf(method) == -1) {
-                console.log("<=" + req_str + " 405 " + $c.RESPONSES[405].message);
+                console.log("<=" + headers[0] + " 405 " + $c.RESPONSES[405].message);
                 return _send(self,source, 405, $c.RESPONSES[405]);
             }
             this.route = route;
@@ -202,7 +211,7 @@ function Proxy(config) {
                 }
 
                 if (!allowed) {
-                    console.log("<=" + req_str + " 403 " + $c.RESPONSES[403].message);
+                    console.log("<=" + headers[0] + " 403 " + $c.RESPONSES[403].message);
                     return _send(self,source, 403,$c.RESPONSES[403]);
                 }
             }
@@ -226,19 +235,19 @@ function Proxy(config) {
                     destination.on('drain',function(){ self.emit('drain', {"destination":destination}); });
                     destination.on('error',function(err){
                         if(self.listeners('error').length) { self.emit('error', {"destination":destination,"error": err}); }
-                        console.log("<=" + req_str + " 500 " + $c.RESPONSES[500].message);
+                        console.log("<=" + headers[0] + " 500 " + $c.RESPONSES[500].message);
                         source.end();
                     });
                     destination.on('lookup',function(err,address,family){
                         self.emit('lookup', {"destination":destination, error:err, address:address, family:family});
                     });
                     destination.on('timeout',function(){
-                        console.log("<=" + req_str + " 504 " + $c.RESPONSES[504].message);
+                        console.log("<=" + headers[0] + " 504 " + $c.RESPONSES[504].message);
                         source.end();
                     });
                     if (!this.destinations.length) {
                         destination.on('end',function(){
-                            console.log("<=" + req_str + " 200 " + $c.RESPONSES[200].message);
+                            console.log("<=" + headers[0] + " 200 " + $c.RESPONSES[200].message);
                         });
                     }
                     this.destinations.push(destination);
@@ -282,7 +291,14 @@ function _send (self, source, statusCode, data) {
     return source.end();
 }
 function _config_validator (config) {
-    if (!config) { return { routes : {"DEFAULT":{host:["localhost"],port:["8080"]}}, port:"80", host: ""}; }
+    if (!config) {
+        return {
+            "port" : "80",
+            "host" : "",
+            "routes" : {},
+            "DEFAULT": { "host": ["localhost"], "port": ["8080"] }
+        };
+    }
     var error = "";
     config.routes = config.routes || {};
     config.port = config.port || "";
@@ -290,28 +306,33 @@ function _config_validator (config) {
     config.HTTP_AUTH_USERNAME = config.HTTP_AUTH_USERNAME || "";
     config.HTTP_AUTH_PASSWORD = config.HTTP_AUTH_PASSWORD || "";
     
-    var routes = config.routes;
-    for (var prop in routes) {
-        if (!routes.hasOwnProperty(prop)) { continue; }
-        var route = routes[prop];
-        // set defaults
-        route.path = route.path || "/";
-        route.host = typeof route.host == "string" ? route.host.split(',') : (route.host || ["localhost"]);
-        route.port = typeof route.port == "string" || typeof route.port == "number" ? route.port.toString().split(',') : (route.port || [""]);
-        route.allow = typeof route.allow == "string" ? route.allow.split(',') : (route.allow || ["*"]);
-        
-        // check for errors
-        if (typeof route.path != "string") {
-            error += "Error: 'path' must be a string in route: " + prop + "\n";
-        }
-        if (typeof route.host != "object" && route.host.length != undefined) {
-            error += "Error: 'host' must be a string or array in route: " + "\n";
-        }
-        if (typeof route.port != "object" && route.port.length != undefined) {
-            error += "Error: 'port' must be a string or array in route: " + "\n";
-        }
-        if (typeof route.allow != "object" && route.allow.length != undefined) {
-            error += "Error: 'allow' must be a string or array in route: " + "\n";
+    var droutes = config.routes;
+
+    for (var rt in droutes) { // rt is the FQDN
+        if (!droutes.hasOwnProperty(rt)) { continue; }
+        var routes = droutes[rt];
+        for (var prop in routes) { // prop is the request path
+            if (!routes.hasOwnProperty(prop)) { continue; }
+            var route = routes[prop];
+            // set defaults
+            route.path = route.path || "/";
+            route.host = typeof route.host == "string" ? route.host.split(',') : (route.host || ["localhost"]);
+            route.port = typeof route.port == "string" || typeof route.port == "number" ? route.port.toString().split(',') : (route.port || [""]);
+            route.allow = typeof route.allow == "string" ? route.allow.split(',') : (route.allow || ["*"]);
+
+            // check for errors
+            if (typeof route.path != "string") {
+                error += "Error: 'path' must be a string in route: " + prop + "\n";
+            }
+            if (typeof route.host != "object" && route.host.length != undefined) {
+                error += "Error: 'host' must be a string or array in route: " + "\n";
+            }
+            if (typeof route.port != "object" && route.port.length != undefined) {
+                error += "Error: 'port' must be a string or array in route: " + "\n";
+            }
+            if (typeof route.allow != "object" && route.allow.length != undefined) {
+                error += "Error: 'allow' must be a string or array in route: " + "\n";
+            }
         }
     }
     if (error) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.8                               /*/
+/*/ Craydent LLC proxy-v0.1.15                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -22,7 +22,7 @@ var run = $c.yieldable(exec);
 
 if($c.include('../pconfig')) {
 	return $c.syncroit(function*(){
-		yield run(__dirname + "/node_script.sh proxy \"index.js\" " + __dirname.replace('/bin','') + ";");
+		yield run(__dirname + "/node_script.sh proxy \"index.js\" " + __dirname.replace('bin','') + ";");
 		process.exit();
 	});
 }
@@ -39,9 +39,8 @@ $c.syncroit(function*() {
 
 
 	var port = (process.argv[2] || (yield question('What port should proxy run on? (80): ')) || 80).toString().split(',');
-	var host = (process.argv[3] && (process.argv[3] == "*" ? "" : process.argv[3]) || (yield question('What host can access this proxy? (*): '))).split(',');
+	var host = (process.argv[3] ? (process.argv[3] == "*" ? "" : process.argv[3].toString()) : (yield question('What host can access this proxy? (*): '))).split(',');
 
-	host.map(function(h){ return parseInt(h); });
 	port.map(function(p){ return parseInt(p); });
 
 	var routes, content;
@@ -58,14 +57,16 @@ $c.syncroit(function*() {
 	if (!routes) {
 		routes = {};
 		answer = (yield question('Do you want to configure routes now? (yes): ')) || "yes";
+		var domain = "";
 		while (answer in yes) {
-			var name = yield question('Provide a name for this route: ');
+			domain = (yield question('What is FQDN or IP for this route? '+(domain?'('+domain+')':'')+': ')) || domain;
 			var rhost = (yield question('What host will this route be forwarding to? (localhost): ')) || "";
 			var rport = (yield question('What port will this route be forwarding to? (80): ')) || 80;
-			var rpath = yield question('What outfacing path relative to the domain? (/' + name + '): ');
+			var rpathdestination = (yield question('What path will this route be forwarding to? (/): ')) || '/';
+			var rpathreq = (yield question('What outfacing path relative to the domain? (/): ')) || '/';
 
 			var headers = {};
-			var hasHeaders = (yield question('Are there any headers to send with each request to this route? (no): ')) || "no";
+			var hasHeaders = (yield question('Are there any headers to overwrite with each request to this route? (no): ')) || "no";
 			while (hasHeaders in yes) {
 				var hname = yield question('What is the name of the header? ');
 				var hval = yield question('What is the value of the header? ');
@@ -75,13 +76,15 @@ $c.syncroit(function*() {
 			var allowed = (yield question('What hosts can access this route? (*): ')) || "*";
 			var verbs = (yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete";
 
-			routes[name] = {
+			routes[domain] = routes[domain] || {};
+			routes[domain][rpathreq] = {
 				host: rhost,
 				port: rport,
 				verbs: verbs,
 				allow: allowed,
 				headers: headers,
-				path: rpath
+				path: rpathdestination,
+				request_path: rpathreq
 			};
 
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
@@ -91,8 +94,7 @@ $c.syncroit(function*() {
 
 	var dirpath = __dirname.replace('/bin','');
 	fs.writeFileSync(dirpath + "/pconfig.json",ncontent);
-	//yield run("echo \"" + ncontent + "\" > " + dirpath + "/pconfig.json;");
-	yield run(__dirname + "/node_script.sh proxy \"index.js\" " + dirpath + ";");
+	yield run(__dirname + "/node_script.sh proxy \"index.js\" " + dirpath + "/;");
 
 	console.log("Complete");
 	process.exit();
