@@ -1,4 +1,78 @@
 {
-    "HTTP_AUTH_USERNAME":"admin",
-    "HTTP_AUTH_PASSWORD":"admin"
+    "host": [""],
+    "port": ["80", "443"],
+    "routes": {
+        "deploy.craydentbridge.com": [{
+            "host": ["localhost"],
+            "port": ["4900"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/socket.io/",
+            "request_path": "/socket.io/*",
+            "domain": "deploy.craydentbridge.com",
+            "http_auth": false
+        },{
+            "host": ["craydent.com"],
+            "port": ["80"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/JsonObjectEditor/",
+            "request_path": "/JsonObjectEditor/*",
+            "domain": "deploy.craydentbridge.com",
+            "http_auth": false
+        },{
+            "host": ["localhost"],
+            "port": ["4900"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/",
+            "request_path": "/:4900/*",
+            "domain": "deploy.craydentbridge.com",
+            "http_auth": false
+        },{
+            "host": ["localhost"],
+            "port": ["4800"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/",
+            "request_path": "/*",
+            "domain": "deploy.craydentbridge.com",
+            "http_auth": false
+        }],
+        "craydentbridge.com": [{
+            "host": ["craydent.com"],
+            "port": ["80"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/JsonObjectEditor/",
+            "request_path": "/JsonObjectEditor/*",
+            "domain": "craydentbridge.com",
+            "http_auth": false
+        },{
+            "host": ["localhost"],
+            "port": ["4800"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/",
+            "request_path": "/deploy/?*",
+            "domain": "craydentbridge.com",
+            "http_auth": false
+        },{
+            "host": ["localhost"],
+            "port": ["4900"],
+            "verbs": ["get", "post", "put", "delete"],
+            "allow": ["*"],
+            "headers": {},
+            "path": "/",
+            "request_path": "/:4900/*",
+            "domain": "craydentbridge.com",
+            "http_auth": false
+        }]
+    }
 }

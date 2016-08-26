@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.17                              /*/
+/*/ Craydent LLC proxy-v0.1.18                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -20,7 +20,7 @@ const fs = require('fs');
 
 var run = $c.yieldable(exec);
 
-if($c.include('../pconfig')) {
+if($c.include('../pconfig.json')) {
 	return $c.syncroit(function*(){
 		yield run(__dirname + "/node_script.sh proxy \"index.js\" " + __dirname.replace('bin','') + ";");
 		process.exit();
@@ -60,7 +60,7 @@ $c.syncroit(function*() {
 		var domain = "";
 		while (answer in yes) {
 			domain = (yield question('What is FQDN or IP for this route? '+(domain?'('+domain+')':'')+': ')) || domain;
-			var rhost = ((yield question('What host will this route be forwarding to? (localhost): ')) || "").split(',');
+			var rhost = ((yield question('What host will this route be forwarding to? (localhost): ')) || "localhost").split(',');
 			var rport = ((yield question('What port will this route be forwarding to? (80): ')) || "80").split(',');
 			var rpathdestination = (yield question('What path will this route be forwarding to? (/): ')) || '/';
 			var rpathreq = (yield question('What outfacing path relative to the domain? (/): ')) || '/';
@@ -80,11 +80,11 @@ $c.syncroit(function*() {
 				headers[hname] = hval;
 				hasHeaders = (yield question('Do you want to add more headers? (yes): ')) || "yes";
 			}
-			var allowed = (yield question('What hosts can access this route? (*): ')) || "*";
-			var verbs = (yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete";
+			var allowed = ((yield question('What hosts can access this route? (*): ')) || "*").split(',');
+			var verbs = ((yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete").toLowerCase().split(',');
 
-			routes[domain] = routes[domain] || {};
-			routes[domain][rpathreq] = {
+			routes[domain] = routes[domain] || [];
+			routes[domain].push({
 				host: rhost,
 				port: rport,
 				verbs: verbs,
@@ -96,12 +96,12 @@ $c.syncroit(function*() {
 				http_auth: enableAuth,
 				http_username: auth_username,
 				http_password: auth_password
-			};
+			});
 
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
 		}
 	}
-	var ncontent = JSON.stringify({host:host,port:port,routes:routes});//.replace("\"","\\\"");
+	var ncontent = JSON.stringify({host:host,port:port,routes:routes});
 
 	var dirpath = __dirname.replace('/bin','');
 	fs.writeFileSync(dirpath + "/pconfig.json",ncontent);
