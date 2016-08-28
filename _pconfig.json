@@ -73,6 +73,51 @@
             "request_path": "/:4900/*",
             "domain": "craydentbridge.com",
             "http_auth": false
-        }]
+        }],
+        "etn.craydentbridge.com": [{
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "2099"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/JOE/",
+                "request_path": "/*",
+                "domain": "etn.craydentbridge.com",
+                "http_auth": false
+            },
+            {
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "2098"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/socket.io/",
+                "request_path": "/socket.io/*",
+                "domain": "etn.craydentbridge.com",
+                "http_auth": false
+            }
+        ]
     }
 }

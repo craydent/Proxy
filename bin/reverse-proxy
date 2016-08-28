@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.18                              /*/
+/*/ Craydent LLC proxy-v0.1.19                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -18,6 +18,8 @@ require('shelljs/global');
 const readline = require('readline');
 const fs = require('fs');
 
+var fswrite = $c.yieldable(fs.writeFile,fs);
+var fsread = $c.yieldable(fs.readFile,fs);
 var run = $c.yieldable(exec);
 
 if($c.include('../pconfig.json')) {
@@ -47,7 +49,7 @@ $c.syncroit(function*() {
 	if (content = process.argv[3]) {
 		if (content.indexOf("{") != -1) {
 			// this is a file
-			content = fs.readFileSync(content, 'utf8');
+			content = yield fsread(content, 'utf8');
 
 		}
 		routes = $c.tryEval(content,JSON.parse);
@@ -104,7 +106,7 @@ $c.syncroit(function*() {
 	var ncontent = JSON.stringify({host:host,port:port,routes:routes});
 
 	var dirpath = __dirname.replace('/bin','');
-	fs.writeFileSync(dirpath + "/pconfig.json",ncontent);
+	yield fswrite(dirpath + "/pconfig.json", ncontent);
 	yield run(__dirname + "/node_script.sh proxy \"index.js\" " + dirpath + "/;");
 
 	console.log("Complete");
