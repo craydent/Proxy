@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.19                              /*/
+/*/ Craydent LLC proxy-v0.1.20                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -21,10 +21,12 @@ const fs = require('fs');
 var fswrite = $c.yieldable(fs.writeFile,fs);
 var fsread = $c.yieldable(fs.readFile,fs);
 var run = $c.yieldable(exec);
+var projectname = "craydent-proxy";
+var configdir = "/var/craydentdeploy/config/" + projectname + "/";
 
-if($c.include('../pconfig.json')) {
+if($c.include(configdir + 'pconfig.json')) {
 	return $c.syncroit(function*(){
-		yield run(__dirname + "/node_script.sh proxy \"index.js\" " + __dirname.replace('bin','') + ";");
+		yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
 		process.exit();
 	});
 }
@@ -106,8 +108,9 @@ $c.syncroit(function*() {
 	var ncontent = JSON.stringify({host:host,port:port,routes:routes});
 
 	var dirpath = __dirname.replace('/bin','');
-	yield fswrite(dirpath + "/pconfig.json", ncontent);
-	yield run(__dirname + "/node_script.sh proxy \"index.js\" " + dirpath + "/;");
+	yield run("mkdir -p \"" + configdir + "\";");
+	yield fswrite(configdir + "pconfig.json", ncontent);
+	yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + dirpath + "/;");
 
 	console.log("Complete");
 	process.exit();

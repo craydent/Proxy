@@ -1,5 +1,5 @@
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.19                              /*/
+/*/ Craydent LLC proxy-v0.1.20                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -39,7 +39,7 @@ function Proxy(config) {
     var self = this,
         host, port,
         routes, route_default,
-        config_path = __dirname + '/pconfig.json';
+        config_path = '/var/craydentdeploy/config/craydent-proxy/pconfig.json';
     self.server = [];
     if (!config || $c.isString(config)) {
         config_path = config || config_path;
@@ -307,24 +307,8 @@ function _reload_config(proxy, cpath, out) {
     out.message = {"message":"Config reloaded"};
     var oldProxy = proxy;
     try {
-        //get absolute directory
-        var absPath = cpath;
-        if (typeof absPath == "string") {
-            var dir = __dirname,
-                prefix = absPath.substring(0,2);
-            if (prefix == "./") {
-                absPath = absPath.substring(0,2);
-            }
-            while (prefix == "..") {
-                dir = dir.substring(0,dir.lastIndexOf('/'));
-                absPath = absPath.substring(3);
-
-                prefix = absPath.substring(0,2);
-            }
-            absPath = dir + '/' + absPath;
-        }
-        delete require.cache[absPath || (__dirname + '/pconfig.json')];
-        proxy = _config_validator(require(cpath || './pconfig.json'));
+        delete require.cache[cpath];
+        proxy = _config_validator(require(cpath));
         console.log("Config reloaded.");
         return proxy;
     } catch (e) {
