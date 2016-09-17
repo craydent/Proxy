@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.20                              /*/
+/*/ Craydent LLC proxy-v0.1.21                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -13,14 +13,14 @@
 	4=>proxy host
 	5=>json string or file
 */
-require('craydent/noConflict');
-require('shelljs/global');
+var $c = require('craydent/noConflict');
+var $s = require('shelljs');
 const readline = require('readline');
 const fs = require('fs');
 
 var fswrite = $c.yieldable(fs.writeFile,fs);
 var fsread = $c.yieldable(fs.readFile,fs);
-var run = $c.yieldable(exec);
+var run = $c.yieldable($s.exec, $s);
 var projectname = "craydent-proxy";
 var configdir = "/var/craydentdeploy/config/" + projectname + "/";
 

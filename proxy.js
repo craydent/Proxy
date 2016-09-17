@@ -1,5 +1,5 @@
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.20                              /*/
+/*/ Craydent LLC proxy-v0.1.21                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -21,7 +21,8 @@ route: {
     }]
 }
 */
-require('craydent/noConflict');
+var $c = require('craydent/noConflict');
+var $g = global;
 $g.DEFAULT_HTTP_PORT = 80;
 
 var net = require('net'),
@@ -34,6 +35,13 @@ $c.catchAll(function (err) {
     console.error(err, err.stack);
     onerror && onerror(err);
 });
+function flog(){
+    var prefix = $c.now('M d H:i:s')+' PID[' + process.pid + ']: ';
+    for (var i = 0, len = arguments.length; i < len; i++) {
+        if ($c.isString(arguments[i])) { console.log(prefix + arguments[i]); }
+        else { console.log(prefix, arguments[i]); }
+    }
+}
 
 function Proxy(config) {
     var self = this,
@@ -53,10 +61,10 @@ function Proxy(config) {
                 route_default = config.DEFAULT;
             }
         };
-        fs.watch(config_path, cb);
-        if (!config) { try {require(config_path);} catch(e){console.log(e);}}
+        try { fs.watch(config_path, cb); } catch (e) {e.errno == "ENOENT" ? flog(config_path +" not found: using default config") : flog(e); }
+        if (!config) { try { require(config_path); } catch(e){ flog(e); }}
     }
-    console.log('proxy initalized');
+    flog('proxy initalized');
 
     config = _config_validator(config);
     port = config.port;
@@ -65,7 +73,7 @@ function Proxy(config) {
     route_default = config.DEFAULT;
 
     function server(source) {
-        console.log('connection established');
+        flog('connection established');
         self.emit('connect', source);
         source.start = $c.now();
         source.on('data',function(chunk) {
@@ -73,7 +81,7 @@ function Proxy(config) {
             self.emit('data', chunk);
             if (this.header && this.header != headers[0] && headers[0].indexOf('HTTP') != -1) {
                 // fix bug/issue with net.createServer on data
-                return source.end();
+                return source.destroy();
             }
 
             this.destinations = this.destinations || [];
@@ -137,12 +145,12 @@ function Proxy(config) {
 
                 headers[0] = this.header = theRoute ? this.header.replace(old_path, req_path) : this.header;
             }
-            console.log("=>" + this.header);
+            flog("=>" + this.header);
             if (!theRoute) {
                 route = 'DEFAULT';
                 if(!(theRoute = route_default)) {
                     if ($c.indexOfAlt(headers,/User-Agent: ELB-HealthChecker/) != -1) {
-                        return _send(self, src, 200, $c.RESPONSES[200],null,this.header);
+                        return _send(self, src, 200, $c.RESPONSES[200],null,this.header, true);
                     } else {
                         return _send(self, src, 400, $c.RESPONSES[400],null,this.header);
                     }
@@ -262,8 +270,8 @@ function Proxy(config) {
                     });
                     if (!this.destinations.length) {
                         destination.on('end',function(){
-                            console.log("<=" + src.header + " 200 " + $c.RESPONSES[200].message);
-                            //source.destroy();
+                            flog("<=" + src.header + " 200 " + $c.RESPONSES[200].message);
+                            source.destroy();
                         });
                     }
                     this.destinations.push(destination);
@@ -282,11 +290,13 @@ function Proxy(config) {
             }
 
         });
+        source.on('error', function (err) { source.destroy(); throw err; });
+        source.on('end', function () { source.destroy(); });
     }
     function create(hh, pp) {
         self.server.push(net.createServer({allowHalfOpen: true}, server).listen({port:pp, host:hh,exclusive:true}, function () {
             self.emit('bind', {host: hh, port: pp});
-            console.log(hh + ' listening on port: ' + pp);
+            flog((hh ? hh + " ":"") + 'listening on port: ' + pp);
         }));
     }
     port = $c.isArray(port) ? port : [port];
@@ -300,7 +310,7 @@ function Proxy(config) {
     return self;
 }
 function _reload_config(proxy, cpath, out) {
-    console.log("Reloading config.");
+    flog("Reloading config.");
     out = out || {};
     out.failed = false;
     out.code = 200;
@@ -309,21 +319,21 @@ function _reload_config(proxy, cpath, out) {
     try {
         delete require.cache[cpath];
         proxy = _config_validator(require(cpath));
-        console.log("Config reloaded.");
+        flog("Config reloaded.");
         return proxy;
     } catch (e) {
         out.failed = true;
         out.code = 500;
         out.message = {"message":"Failed to reload config","error":e.toString()};
-        console.log("Failed to Load json",e);
+        flog("Failed to Load json",e);
         return (proxy = oldProxy);
     } finally {
         $c.logit('new config: ',proxy);
     }
 }
-function _send (self, source, statusCode, data, headers, hline1) {
+function _send (self, source, statusCode, data, headers, hline1, destroy) {
     try {
-        console.log("<=" + hline1 + " " + statusCode + " " + (data.message || data));
+        flog("<=" + hline1 + " " + statusCode + " " + (data.message || data));
         headers = headers || {};
         var harray = [];
         if ($c.isObject(headers)) {
@@ -348,10 +358,13 @@ function _send (self, source, statusCode, data, headers, hline1) {
             self.emit('error', data);
         }
 
-        source.write(response.join(lineBreakChar));
-        return source.end();
+        //source.write(response.join(lineBreakChar),function (err) {
+        //    if (err) { flog("Error on write: ",err); }
+        //    source.end();
+        //});
+        return source.end(response.join(lineBreakChar));
     } catch (e) {
-        console.log(e, e.stack);
+        flog(e, e.stack);
     } finally {
         $c.logit("duration for " + source.header + ": " + ($c.now() - source.start));
         source.route = undefined;
@@ -359,6 +372,7 @@ function _send (self, source, statusCode, data, headers, hline1) {
         source.fqdn = undefined;
         source.header = undefined;
         source.start = undefined;
+        destroy && source.destroy();
     }
 }
 function _config_validator (config) {
