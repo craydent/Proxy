@@ -12,8 +12,8 @@
 # $3=>node root folder/server file path (absolute node path)
 # $4=>do not start
 
-#sudo mkdir -p /var/craydentdeploy/nodejs/$1;
-#cd /var/craydentdeploy/nodejs/$1;
+#sudo mkdir -p /var/craydent/nodejs/$1;
+#cd /var/craydent/nodejs/$1;
 projpath=$1
 nodepath=$3
 if [ -z "$3" ]; then
@@ -33,7 +33,7 @@ ps aux | egrep "node\s$nodepath($list)$".*|awk '{print $2}' | xargs kill -9
 echo "$4 parameter4";
 echo "after kill $nodepath $2 $3 $4";
 if [ -z "$4" ]; then
-    logBasePath="/var/craydentdeploy/log/$projpath";
+    logBasePath="/var/craydent/log/$projpath";
     mkdir -p "$logBasePath/archive";
 
     for i in "${process_list[@]}"; do

@@ -14,7 +14,7 @@
     "cproxy":"./bin/reverse-proxy"
   },
   "dependencies": {
-    "craydent" : "~0.6.13",
+    "craydent" : "~0.6.19",
     "shelljs": "0.5.3"
   },
   "keywords": [

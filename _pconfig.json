@@ -1,85 +1,183 @@
 {
     "host": [""],
     "port": ["80", "443"],
+    "protocol": ["https"],
+    "certs" : {
+        "www.inavids.com":{
+            "key": ["-----BEGIN PRIVATE KEY-----",
+                "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDK+k4c2+RZE+Lr",
+                "741uZ2k/wQOek5fKp+tIkzFT/ttkfBYhuwhvGhF0MbfZHVBQBv/rt9jfj9ZBo3OD",
+                "O+1HfHDgo77P9ZqclgEn1E1rZhgpcdlwVTExQdEuCBiGYDgZ695sC3BZtGlT32Po",
+                "xPKP1u6dwldvjhhxbOoR5/AcfbcDYUFKhywcha85bq48dgkmNiBf/SRCAV+79fG6",
+                "SKl/AMzIjne29Hzd/EyXQKkL6Re9ZqT/DlWfBGWELED3aX8dcAo8TIxFTZUfcgPE",
+                "DYJaCfKliXrDMtFqb9wGg93inL3VWpARq5YmvmZzhUw917ZDYrjtLXdVZhbBA/MY",
+                "QKnucW75AgMBAAECggEBAMWVIEKBXmfDruoCF0d4TICt70sG2wR/rs3H0oW0GXZY",
+                "P+b3vH8B/imAWDl1in9MQQUAwpDk4Cim5kPCKviiTvKtEoo2xxlT/634wKAiErUN",
+                "SR9LHoaXTfskEFOGCDZbXvkHrYb00m69jvC//mo8S6yvyBMkW/DVl4h0oUvqqCMV",
+                "Yyj7tTCoygmFt0RzfABHAVIUuT+/25RuqXmTV4oYZe9TsszaKKM3vx+9ONAxh6tr",
+                "abTyY2z8Iv5t7tcgmwnMIWaA3c+dxzkb2xapLMOygGbKSKeufoVDKyuPCu/2bzuG",
+                "5aJ/d7MpZbZ1l/gTwpUeb+7pZcZtJKy2UMn07tHQIJ0CgYEA/0KOVTGq7BQLuVSw",
+                "gVPNoGIAasS/Z4gVsgOEMW0P0mnzX03Uh0WMGxKWq/9jyzWd4+qAMu7Wbt6C8TGJ",
+                "YHp7m+35heMDc3/GfQtRFT6WmBjUHR2fOFbjrDCB8uwp/8T2XXlpm/mw1Iv6wuPL",
+                "MtGQH/qEbHXWiogz81KAN/qo6Z8CgYEAy5DygrPCFZ74DyDxmAjoIFp7ud5dQ36h",
+                "ZVuJNOzd56BqAnZOpqUjLGE7r1iqz8h0e9leh47MYgt722A5XWhyXIjUpZmZsufQ",
+                "ExTGF2nK36eizv986p9eY/O1tCauZImUPSanRuUspFgWo7vLiODl+rUna6fvVIQd",
+                "HboyIlmukGcCgYEA7va22sjBk3r8ssa26ouyv8efTlTcPycl8F3cXo0UN86aWQk6",
+                "wlx4WkvfpCtVmEKcimbZF1WCh45llTjju99OYt65Lv8kFvdysVNr1/Cc+MydnphB",
+                "m3O0dll+/hTbCKeyYDWuiaeKRKC648JvUybevyE+4W67pzr1L4B3qnBNu08CgYAJ",
+                "odEnyBOt7Di2lot38yvwo/dowxHMqMhAQIWMgIy7cgayGSD9l6DDb9JgKKTkcgq4",
+                "9X8YkPQwy3RP3Ay6079di4fsUglIwtlAneIFp5bW4Fq+yq4BeAsCVbzKSm5ECZJ/",
+                "Fj4iB6QGHrjrhG5MCsA3Da1Q1cBoUlwCVRYcM/wjjwKBgQCsetjrd77wtVI6l06E",
+                "xhzv7LScmPp3qlhw9vMZpSnztS1C2R7nsPIApZ3INwIJZ2za9L3u87q55cIHhEgL",
+                "OCJtmIylYQyERszvyrk95r6C/UkGcczmkEKHKCBUZ2KI3W13lb5+4pTHjGzbMjCs",
+                "Ptfg8kmu5ETKSiKqBMQLu0j27g==",
+                "-----END PRIVATE KEY-----"],
+            "certificate": ["-----BEGIN CERTIFICATE-----",
+                "MIIFJDCCBAygAwIBAgIHBBLgPjW6jzANBgkqhkiG9w0BAQsFADCBtDELMAkGA1UE",
+                "BhMCVVMxEDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAY",
+                "BgNVBAoTEUdvRGFkZHkuY29tLCBJbmMuMS0wKwYDVQQLEyRodHRwOi8vY2VydHMu",
+                "Z29kYWRkeS5jb20vcmVwb3NpdG9yeS8xMzAxBgNVBAMTKkdvIERhZGR5IFNlY3Vy",
+                "ZSBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkgLSBHMjAeFw0xNDEwMDgwNjEwMDFaFw0x",
+                "NzEwMDgwNjEwMDFaMD0xITAfBgNVBAsTGERvbWFpbiBDb250cm9sIFZhbGlkYXRl",
+                "ZDEYMBYGA1UEAxMPd3d3LmluYXZpZHMuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOC",
+                "AQ8AMIIBCgKCAQEAyvpOHNvkWRPi6++NbmdpP8EDnpOXyqfrSJMxU/7bZHwWIbsI",
+                "bxoRdDG32R1QUAb/67fY34/WQaNzgzvtR3xw4KO+z/WanJYBJ9RNa2YYKXHZcFUx",
+                "MUHRLggYhmA4GevebAtwWbRpU99j6MTyj9buncJXb44YcWzqEefwHH23A2FBSocs",
+                "HIWvOW6uPHYJJjYgX/0kQgFfu/XxukipfwDMyI53tvR83fxMl0CpC+kXvWak/w5V",
+                "nwRlhCxA92l/HXAKPEyMRU2VH3IDxA2CWgnypYl6wzLRam/cBoPd4py91VqQEauW",
+                "Jr5mc4VMPde2Q2K47S13VWYWwQPzGECp7nFu+QIDAQABo4IBrzCCAaswDAYDVR0T",
+                "AQH/BAIwADAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDgYDVR0PAQH/",
+                "BAQDAgWgMDYGA1UdHwQvMC0wK6ApoCeGJWh0dHA6Ly9jcmwuZ29kYWRkeS5jb20v",
+                "Z2RpZzJzMS04Ny5jcmwwUwYDVR0gBEwwSjBIBgtghkgBhv1tAQcXATA5MDcGCCsG",
+                "AQUFBwIBFitodHRwOi8vY2VydGlmaWNhdGVzLmdvZGFkZHkuY29tL3JlcG9zaXRv",
+                "cnkvMHYGCCsGAQUFBwEBBGowaDAkBggrBgEFBQcwAYYYaHR0cDovL29jc3AuZ29k",
+                "YWRkeS5jb20vMEAGCCsGAQUFBzAChjRodHRwOi8vY2VydGlmaWNhdGVzLmdvZGFk",
+                "ZHkuY29tL3JlcG9zaXRvcnkvZ2RpZzIuY3J0MB8GA1UdIwQYMBaAFEDCvSeOzDSD",
+                "MKIz1/tss/C0LIDOMCcGA1UdEQQgMB6CD3d3dy5pbmF2aWRzLmNvbYILaW5hdmlk",
+                "cy5jb20wHQYDVR0OBBYEFM5rj78eDbs3g3CMH2JrNe2XESsfMA0GCSqGSIb3DQEB",
+                "CwUAA4IBAQB+fBqSvLFzEK8SXXfduPZ5nbQAGwCnUjYpogzpGqd7Au+JO4R6Wgdj",
+                "VPeWuhp2UqB46JJEm1GticLiBIBoVzF7Bbe2OVA8Cv6mHqyn2pot89ikBK5zmuBd",
+                "3Xbqmo3ywWXgEvTzfG4i5ksfMzAB9W+mLhNRIzkvWJKcDGoThq0nQP//1Dasttce",
+                "IYYKkpKTzbY12JhxZfm0bApVCocNpNtDGaQtNfPY94BO8DUhIBpze8g1ucn1HHrO",
+                "Wcdjltppq0uEsxZ8lmwWhMEU5T6npziWeAi3jDElgGdX0+WsOORXgKWtbpAF8B7g",
+                "NamFwKo1PzK3oo0OdgNCTm/Oulp5qCA1",
+                "-----END CERTIFICATE-----"],
+            "certificate_authority": ["-----BEGIN CERTIFICATE-----",
+                "MIIE0DCCA7igAwIBAgIBBzANBgkqhkiG9w0BAQsFADCBgzELMAkGA1UEBhMCVVMx",
+                "EDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoT",
+                "EUdvRGFkZHkuY29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRp",
+                "ZmljYXRlIEF1dGhvcml0eSAtIEcyMB4XDTExMDUwMzA3MDAwMFoXDTMxMDUwMzA3",
+                "MDAwMFowgbQxCzAJBgNVBAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQH",
+                "EwpTY290dHNkYWxlMRowGAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjEtMCsGA1UE",
+                "CxMkaHR0cDovL2NlcnRzLmdvZGFkZHkuY29tL3JlcG9zaXRvcnkvMTMwMQYDVQQD",
+                "EypHbyBEYWRkeSBTZWN1cmUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwggEi",
+                "MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC54MsQ1K92vdSTYuswZLiBCGzD",
+                "BNliF44v/z5lz4/OYuY8UhzaFkVLVat4a2ODYpDOD2lsmcgaFItMzEUz6ojcnqOv",
+                "K/6AYZ15V8TPLvQ/MDxdR/yaFrzDN5ZBUY4RS1T4KL7QjL7wMDge87Am+GZHY23e",
+                "cSZHjzhHU9FGHbTj3ADqRay9vHHZqm8A29vNMDp5T19MR/gd71vCxJ1gO7GyQ5HY",
+                "pDNO6rPWJ0+tJYqlxvTV0KaudAVkV4i1RFXULSo6Pvi4vekyCgKUZMQWOlDxSq7n",
+                "eTOvDCAHf+jfBDnCaQJsY1L6d8EbyHSHyLmTGFBUNUtpTrw700kuH9zB0lL7AgMB",
+                "AAGjggEaMIIBFjAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNV",
+                "HQ4EFgQUQMK9J47MNIMwojPX+2yz8LQsgM4wHwYDVR0jBBgwFoAUOpqFBxBnKLbv",
+                "9r0FQW4gwZTaD94wNAYIKwYBBQUHAQEEKDAmMCQGCCsGAQUFBzABhhhodHRwOi8v",
+                "b2NzcC5nb2RhZGR5LmNvbS8wNQYDVR0fBC4wLDAqoCigJoYkaHR0cDovL2NybC5n",
+                "b2RhZGR5LmNvbS9nZHJvb3QtZzIuY3JsMEYGA1UdIAQ/MD0wOwYEVR0gADAzMDEG",
+                "CCsGAQUFBwIBFiVodHRwczovL2NlcnRzLmdvZGFkZHkuY29tL3JlcG9zaXRvcnkv",
+                "MA0GCSqGSIb3DQEBCwUAA4IBAQAIfmyTEMg4uJapkEv/oV9PBO9sPpyIBslQj6Zz",
+                "91cxG7685C/b+LrTW+C05+Z5Yg4MotdqY3MxtfWoSKQ7CC2iXZDXtHwlTxFWMMS2",
+                "RJ17LJ3lXubvDGGqv+QqG+6EnriDfcFDzkSnE3ANkR/0yBOtg2DZ2HKocyQetawi",
+                "DsoXiWJYRBuriSUBAA/NxBti21G00w9RKpv0vHP8ds42pM3Z2Czqrpv1KrKQ0U11",
+                "GIo/ikGQI31bS/6kA1ibRrLDYGCD+H1QQc7CoZDDu+8CL9IVVO5EFdkKrqeKM+2x",
+                "LXY2JtwE65/3YR8V3Idv7kaWKK2hJn0KCacuBKONvPi8BDAB",
+                "-----END CERTIFICATE-----",
+                "-----BEGIN CERTIFICATE-----",
+                "MIIEfTCCA2WgAwIBAgIDG+cVMA0GCSqGSIb3DQEBCwUAMGMxCzAJBgNVBAYTAlVT",
+                "MSEwHwYDVQQKExhUaGUgR28gRGFkZHkgR3JvdXAsIEluYy4xMTAvBgNVBAsTKEdv",
+                "IERhZGR5IENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTQwMTAx",
+                "MDcwMDAwWhcNMzEwNTMwMDcwMDAwWjCBgzELMAkGA1UEBhMCVVMxEDAOBgNVBAgT",
+                "B0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoTEUdvRGFkZHku",
+                "Y29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRpZmljYXRlIEF1",
+                "dGhvcml0eSAtIEcyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv3Fi",
+                "CPH6WTT3G8kYo/eASVjpIoMTpsUgQwE7hPHmhUmfJ+r2hBtOoLTbcJjHMgGxBT4H",
+                "Tu70+k8vWTAi56sZVmvigAf88xZ1gDlRe+X5NbZ0TqmNghPktj+pA4P6or6KFWp/",
+                "3gvDthkUBcrqw6gElDtGfDIN8wBmIsiNaW02jBEYt9OyHGC0OPoCjM7T3UYH3go+",
+                "6118yHz7sCtTpJJiaVElBWEaRIGMLKlDliPfrDqBmg4pxRyp6V0etp6eMAo5zvGI",
+                "gPtLXcwy7IViQyU0AlYnAZG0O3AqP26x6JyIAX2f1PnbU21gnb8s51iruF9G/M7E",
+                "GwM8CetJMVxpRrPgRwIDAQABo4IBFzCCARMwDwYDVR0TAQH/BAUwAwEB/zAOBgNV",
+                "HQ8BAf8EBAMCAQYwHQYDVR0OBBYEFDqahQcQZyi27/a9BUFuIMGU2g/eMB8GA1Ud",
+                "IwQYMBaAFNLEsNKR1EwRcbNhyz2h/t2oatTjMDQGCCsGAQUFBwEBBCgwJjAkBggr",
+                "BgEFBQcwAYYYaHR0cDovL29jc3AuZ29kYWRkeS5jb20vMDIGA1UdHwQrMCkwJ6Al",
+                "oCOGIWh0dHA6Ly9jcmwuZ29kYWRkeS5jb20vZ2Ryb290LmNybDBGBgNVHSAEPzA9",
+                "MDsGBFUdIAAwMzAxBggrBgEFBQcCARYlaHR0cHM6Ly9jZXJ0cy5nb2RhZGR5LmNv",
+                "bS9yZXBvc2l0b3J5LzANBgkqhkiG9w0BAQsFAAOCAQEAWQtTvZKGEacke+1bMc8d",
+                "H2xwxbhuvk679r6XUOEwf7ooXGKUwuN+M/f7QnaF25UcjCJYdQkMiGVnOQoWCcWg",
+                "OJekxSOTP7QYpgEGRJHjp2kntFolfzq3Ms3dhP8qOCkzpN1nsoX+oYggHFCJyNwq",
+                "9kIDN0zmiN/VryTyscPfzLXs4Jlet0lUIDyUGAzHHFIYSaRt4bNYC8nY7NmuHDKO",
+                "KHAN4v6mF56ED71XcLNa6R+ghlO773z/aQvgSMO3kwvIClTErF0UZzdsyqUvMQg3",
+                "qm5vjLyb4lddJIGvl5echK1srDdMZvNhkREg5L4wn3qkKQmw4TRfZHcYQFHfjDCm",
+                "rw==",
+                "-----END CERTIFICATE-----",
+                "-----BEGIN CERTIFICATE-----",
+                "MIIEADCCAuigAwIBAgIBADANBgkqhkiG9w0BAQUFADBjMQswCQYDVQQGEwJVUzEh",
+                "MB8GA1UEChMYVGhlIEdvIERhZGR5IEdyb3VwLCBJbmMuMTEwLwYDVQQLEyhHbyBE",
+                "YWRkeSBDbGFzcyAyIENlcnRpZmljYXRpb24gQXV0aG9yaXR5MB4XDTA0MDYyOTE3",
+                "MDYyMFoXDTM0MDYyOTE3MDYyMFowYzELMAkGA1UEBhMCVVMxITAfBgNVBAoTGFRo",
+                "ZSBHbyBEYWRkeSBHcm91cCwgSW5jLjExMC8GA1UECxMoR28gRGFkZHkgQ2xhc3Mg",
+                "MiBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTCCASAwDQYJKoZIhvcNAQEBBQADggEN",
+                "ADCCAQgCggEBAN6d1+pXGEmhW+vXX0iG6r7d/+TvZxz0ZWizV3GgXne77ZtJ6XCA",
+                "PVYYYwhv2vLM0D9/AlQiVBDYsoHUwHU9S3/Hd8M+eKsaA7Ugay9qK7HFiH7Eux6w",
+                "wdhFJ2+qN1j3hybX2C32qRe3H3I2TqYXP2WYktsqbl2i/ojgC95/5Y0V4evLOtXi",
+                "EqITLdiOr18SPaAIBQi2XKVlOARFmR6jYGB0xUGlcmIbYsUfb18aQr4CUWWoriMY",
+                "avx4A6lNf4DD+qta/KFApMoZFv6yyO9ecw3ud72a9nmYvLEHZ6IVDd2gWMZEewo+",
+                "YihfukEHU1jPEX44dMX4/7VpkI+EdOqXG68CAQOjgcAwgb0wHQYDVR0OBBYEFNLE",
+                "sNKR1EwRcbNhyz2h/t2oatTjMIGNBgNVHSMEgYUwgYKAFNLEsNKR1EwRcbNhyz2h",
+                "/t2oatTjoWekZTBjMQswCQYDVQQGEwJVUzEhMB8GA1UEChMYVGhlIEdvIERhZGR5",
+                "IEdyb3VwLCBJbmMuMTEwLwYDVQQLEyhHbyBEYWRkeSBDbGFzcyAyIENlcnRpZmlj",
+                "YXRpb24gQXV0aG9yaXR5ggEAMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQAD",
+                "ggEBADJL87LKPpH8EsahB4yOd6AzBhRckB4Y9wimPQoZ+YeAEW5p5JYXMP80kWNy",
+                "OO7MHAGjHZQopDH2esRU1/blMVgDoszOYtuURXO1v0XJJLXVggKtI3lpjbi2Tc7P",
+                "TMozI+gciKqdi0FuFskg5YmezTvacPd+mSYgFFQlq25zheabIZ0KbIIOqPjCDPoQ",
+                "HmyW74cNxA9hi63ugyuV+I6ShHI56yDqg+2DzZduCLzrTia2cyvk0/ZM/iZx4mER",
+                "dEr/VxqHD3VILs9RaRegAhJhldXRQLIQTO7ErBBDpqWeCtWVYpoNz4iCxTIM5Cuf",
+                "ReYNnyicsbkqWletNw+vHX/bvZ8=",
+                "-----END CERTIFICATE-----"]
+        }
+    },
     "routes": {
-        "deploy.craydentbridge.com": [{
-            "host": ["localhost"],
-            "port": ["4900"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/socket.io/",
-            "request_path": "/socket.io/*",
-            "domain": "deploy.craydentbridge.com",
-            "http_auth": false
-        },{
-            "host": ["craydent.com"],
-            "port": ["80"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/JsonObjectEditor/",
-            "request_path": "/JsonObjectEditor/*",
-            "domain": "deploy.craydentbridge.com",
-            "http_auth": false
-        },{
-            "host": ["localhost"],
-            "port": ["4900"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/",
-            "request_path": "/:4900/*",
-            "domain": "deploy.craydentbridge.com",
-            "http_auth": false
-        },{
-            "host": ["localhost"],
-            "port": ["4800"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/",
-            "request_path": "/*",
-            "domain": "deploy.craydentbridge.com",
-            "http_auth": false
-        }],
-        "craydentbridge.com": [{
-            "host": ["craydent.com"],
-            "port": ["80"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/JsonObjectEditor/",
-            "request_path": "/JsonObjectEditor/*",
-            "domain": "craydentbridge.com",
-            "http_auth": false
-        },{
-            "host": ["localhost"],
-            "port": ["4800"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/",
-            "request_path": "/deploy/?*",
-            "domain": "craydentbridge.com",
-            "http_auth": false
-        },{
-            "host": ["localhost"],
-            "port": ["4900"],
-            "verbs": ["get", "post", "put", "delete"],
-            "allow": ["*"],
-            "headers": {},
-            "path": "/",
-            "request_path": "/:4900/*",
-            "domain": "craydentbridge.com",
-            "http_auth": false
-        }],
-        "etn.craydentbridge.com": [{
+        "www.inavids.com": [
+            {
+                "name": "www.inavids",
                 "host": [
-                    "localhost"
+                    "www.inavids.com"
                 ],
                 "port": [
-                    "2099"
+                    "8000"
+                ],
+                "protocol": ["https"],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/",
+                "request_path": "/",
+                "domain": "inavids.com",
+                "http_auth": false
+            }
+        ],
+        "platform.phab.hrt.io": [
+            {
+                "name": "platform_phab",
+                "host": [
+                    "phab.hrt.io"
+                ],
+                "port": [
+                    "443"
                 ],
                 "verbs": [
                     "get",
@@ -91,17 +189,45 @@
                     "*"
                 ],
                 "headers": {},
-                "path": "/JOE/",
-                "request_path": "/*",
-                "domain": "etn.craydentbridge.com",
+                "path": "/project/view/45",
+                "request_path": "/",
+                "domain": "platform.phab.hrt.io",
                 "http_auth": false
-            },
+            }
+        ],
+        "ebs.hart.com": [
             {
+                "name": "ebs",
                 "host": [
                     "localhost"
                 ],
                 "port": [
-                    "2098"
+                    "3000"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/",
+                "request_path": "/",
+                "domain": "ebs.hart.com",
+                "http_auth": false
+            }
+        ],
+        "deploy.craydentbridge.com": [
+            {
+                "name": "deploy",
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "4900"
                 ],
                 "verbs": [
                     "get",
@@ -115,7 +241,147 @@
                 "headers": {},
                 "path": "/socket.io/",
                 "request_path": "/socket.io/*",
-                "domain": "etn.craydentbridge.com",
+                "domain": "deploy.craydentbridge.com",
+                "http_auth": false
+            },
+            {
+                "name": "craydent",
+                "host": [
+                    "craydent.com"
+                ],
+                "port": [
+                    "80"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/JsonObjectEditor/",
+                "request_path": "/JsonObjectEditor/*",
+                "domain": "deploy.craydentbridge.com",
+                "http_auth": false
+            },
+            {
+                "name": "socket",
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "4900"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/",
+                "request_path": "/:4900/*",
+                "domain": "deploy.craydentbridge.com",
+                "http_auth": false
+            },
+            {
+                "name": "web",
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "4800"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/",
+                "request_path": "/*",
+                "domain": "deploy.craydentbridge.com",
+                "http_auth": false
+            }
+        ],
+        "craydentbridge.com": [
+            {
+                "name": "craydent",
+                "host": [
+                    "craydent.com"
+                ],
+                "port": [
+                    "80"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/JsonObjectEditor/",
+                "request_path": "/JsonObjectEditor/*",
+                "domain": "craydentbridge.com",
+                "http_auth": false
+            },
+            {
+                "name": "web",
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "4800"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/",
+                "request_path": "/deploy/?*",
+                "domain": "craydentbridge.com",
+                "http_auth": false
+            },
+            {
+                "name": "socket",
+                "host": [
+                    "localhost"
+                ],
+                "port": [
+                    "4900"
+                ],
+                "verbs": [
+                    "get",
+                    "post",
+                    "put",
+                    "delete"
+                ],
+                "allow": [
+                    "*"
+                ],
+                "headers": {},
+                "path": "/:4900/*",
+                "request_path": "/",
+                "domain": "craydentbridge.com",
                 "http_auth": false
             }
         ]

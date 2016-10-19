@@ -5,8 +5,8 @@
 /*/ (http://craydent.com/license)                           /*/
 /*/---------------------------------------------------------/*/
 var $c = require('craydent/noConflict');
+var Proxy = require('./proxy.js');
 function child (ccluster) {
-	var Proxy = require('./proxy.js');
 	var server = new Proxy();
 	flog('child process initialized');
 }

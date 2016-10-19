@@ -7,51 +7,268 @@
 /*/---------------------------------------------------------/*/
 /*/---------------------------------------------------------/*/
 /* proxy params
-	1=>interpreter/node command (not used)
-	2=>node file being executed (not used)
-	3=>proxy port
-	4=>proxy host
+	0=>interpreter/node command (not used)
+	1=>node file being executed (not used)
+
+initialize
+	2=>proxy port
+	3=>proxy host
+	4=>default host/port
 	5=>json string or file
+
+add route
+	2=>add command
+ 	3=>domain of the route
+ 	4=>name/alias of the route
+	5=>hosts the request will forward to (comma delimited)
+	6=>ports the request will forward to (comma delimited)
+	7=>path being requested
+	8=>destination path to forward to
+	9=>http auth username
+	10=>http auth password
+	11=>headers (JSON)
+	12=>allowed domains to access this route
+	13=>verbs allowed on this route
+	14=>index to add route if the domain exists. (domains at the index specified and greater will be pushed down)
+
+remove route
+	2=>rm command
+	3=>domain of the route
+	4=>name/alias of the route
+
+view Routes
+	2=>config
+	3=>domain fo the route
+	4=>name/alias of the route
+
+add cert
+	2=>addssl command
+	3=>domain of the cert
+	4=>key (file path or string)
+	5=>certificate (file path or string)
+	6=>certificate authority (file path or string)
 */
-var $c = require('craydent/noConflict');
-var $s = require('shelljs');
-const readline = require('readline');
-const fs = require('fs');
+const $c = require('craydent/noConflict'),
+	$s = require('shelljs'),
+	readline = require('readline'),
+	fs = require('fs'),
 
-var fswrite = $c.yieldable(fs.writeFile,fs);
-var fsread = $c.yieldable(fs.readFile,fs);
-var run = $c.yieldable($s.exec, $s);
-var projectname = "craydent-proxy";
-var configdir = "/var/craydentdeploy/config/" + projectname + "/";
+	fswrite = $c.yieldable(fs.writeFile,fs),
+	fsread = $c.yieldable(fs.readFile,fs),
+	run = $c.yieldable($s.exec, $s),
+	rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout
+	}),
+	question = $c.yieldable(rl.question, rl),
 
-if($c.include(configdir + 'pconfig.json')) {
+	PORTS = 2, HOSTS = 3, DEFAULT = 4, CONFIG = 5,
+	REMOVE = 2, VIEW = 2, REMOVESSL = 2,
+	ADDSSL = 2, KEY = 4, CERT = 5, CA = 6,
+	ADD = 2, DOMAIN = 3, NAME = 4, RHOST = 5, RPORT = 6, RPATH = 7, DPATH = 8, AUSER = 9, APASS = 10, HEADERS = 11, ALLOWED = 12, VERBS = 13, INDEX = 14,
+	yes = {yes: 1, y: 1},
+	no = {no: 1, n: 1};
+
+var projectname = "craydent-proxy",
+	configdir = "/var/craydent/config/" + projectname + "/",
+	config = $c.include(configdir + 'pconfig.json');
+
+if (process.argv[VIEW] == 'cat') {
+	return $c.syncroit(function*() {
+		var name = process.argv[NAME],
+			domain = process.argv[DOMAIN];
+
+		if (!domain && !name) { console.log(JSON.stringify(config,null,2)); }
+		else if (!config.routes[domain]) { console.log("No such domain",domain) }
+		else if (!name) { console.log(JSON.stringify(config.routes[domain],null,2)); }
+		else { console.log(JSON.stringify($c.where(config.routes[domain],{name: name})[0] || "No such route",null,2)); }
+		console.log('Complete');
+		process.exit();
+	});
+}
+if (process.argv[ADD] == 'add') {
+	return $c.syncroit(function*() {
+		try {
+			var domain = process.argv[DOMAIN],
+				rts = {},
+				answers = {
+					name: process.argv[NAME],
+					domain: domain,
+					rhost: process.argv[RHOST],
+					rport: process.argv[RPORT],
+					rpathdestination: process.argv[DPATH],
+					rpathreq: process.argv[RPATH],
+					enableauth: process.argv[AUSER] && process.argv[APASS] ? "yes" : "no",
+					auth_username: process.argv[AUSER],
+					auth_password: process.argv[APASS],
+					has_headers: 'no',
+					headers: process.argv[HEADERS] && $c.tryEval(process.argv[HEADERS]),
+					allowed: process.argv[ALLOWED],
+					verbs: process.argv[VERBS]
+				};
+
+			yield* addRoute(null, rts, answers);
+			if ($c.isNull(process.argv[INDEX])) {
+				config.routes[answers.domain].push(rts[answers.domain][0]);
+			}
+			else {
+				$c.insertAt(config.routes[domain], process.argv[INDEX], rts[domain]);
+			}
+
+			yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
+			console.log('Complete');
+		} catch (e) { console.log(e); }
+		process.exit();
+	});
+}
+if (process.argv[ADDSSL] == 'addssl') {
+	return $c.syncroit(function*() {
+		var answers = {
+			key: process.argv[KEY],
+			domain: process.argv[DOMAIN],
+			cert: process.argv[CERT],
+			ca: process.argv[CA]
+		};
+		config.certs = config.certs || {};
+
+		yield* addSSL(null, config.certs, answers);
+		yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
+		console.log('Complete');
+		process.exit();
+	});
+}
+if (process.argv[REMOVE] == 'rm') {
+	return $c.syncroit(function*() {
+		var name = process.argv[NAME],
+			domain = process.argv[DOMAIN];
+
+		if (!name) {
+			var answer = (yield question('This cannot be undone. Are you sure you want to remove all routes for this domain? (type the domain to confirm)')) || 'no';
+			if (answer == domain) {
+				delete config.routes[domain];
+			} else {
+				console.log('Aborted');
+				return process.exit();
+			}
+		} else { console.log('removed',$c.delete(config.routes[domain],{name: name})); }
+		yield fswrite(configdir + "pconfig.json", JSON.stringify(config,null,4));
+		console.log('Complete');
+		process.exit();
+	});
+}
+if (process.argv[REMOVESSL] == 'rmssl') {
+	return $c.syncroit(function*() {
+		var domain = process.argv[DOMAIN];
+		config.certs = config.certs || {};
+		delete config.certs[domain];
+
+		yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
+		console.log('Complete');
+		process.exit();
+	});
+}
+
+if(config) {
 	return $c.syncroit(function*(){
 		yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
 		process.exit();
 	});
 }
 
-const rl = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout
-});
+function* addRoute(domain, routes, answers){
+	answers = answers || {};
+	var name = answers.name || (yield question('Please name/provide an alias for this route: ')) || $c.cuid();
+	domain = answers.domain = answers.domain || (yield question('What is FQDN or IP for this route? '+(domain?'('+domain+'): ':''))) || domain;
+	var rhost = (answers.rhost || (yield question('What host will this route be forwarding to? (localhost): ')) || "localhost").split(',');
+	var rport = (answers.rport || (yield question('What port will this route be forwarding to? (80): ')) || "80").split(',');
+	var rpathdestination = answers.rpathdestination || (yield question('What path will this route be forwarding to? (/): ')) || '/';
+	var rpathreq = answers.rpathreq || (yield question('What outfacing path relative to the domain? (/): ')) || '/';
+
+	var enableAuth = (answers.enableauth || (yield question('Do you want to enable HTTP Basic Authentication? (no): '))) in yes,
+		auth_username, auth_password;
+
+	if (enableAuth) {
+		auth_username = answers.auth_username || (yield question('What is the username? (admin): ')) || 'admin';
+		auth_password = answers.auth_password || (yield question('What is the password? (admin): ')) || 'admin';
+	}
+	var headers = answers.headers || {};
+	var hasHeaders = answers.has_headers || (yield question('Are there any headers to overwrite with each request to this route? (no): ')) || "no";
+	while (hasHeaders in yes) {
+		var hname = yield question('What is the name of the header? ');
+		var hval = yield question('What is the value of the header? ');
+		headers[hname] = hval;
+		hasHeaders = (yield question('Do you want to add more headers? (yes): ')) || "yes";
+	}
+	var allowed = (answers.allowed || (yield question('What hosts can access this route? (*): ')) || "*").split(',');
+	var verbs = (answers.verbs || (yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete").toLowerCase().split(',');
+
+	routes[domain] = routes[domain] || [];
+	var route = {
+		name: name,
+		host: rhost,
+		port: rport,
+		verbs: verbs,
+		allow: allowed,
+		headers: headers,
+		path: rpathdestination,
+		request_path: rpathreq,
+		domain: domain,
+		http_auth: enableAuth,
+		http_username: auth_username,
+		http_password: auth_password
+	};
+	console.log(route);
+	if (!(((yield question('Does this look good? (yes): ')) || "yes") in yes)) {
+		return (yield* addRoute(domain, routes));
+	}
+	routes[domain].push(route);
+	return routes;
+}
+function* addSSL(domain, certs, answers) {
+	answers = answers || {};
+	var key, cert, ca;
+	// retrive the domain and keep asking if it's not provided
+	do{
+		domain = answers.domain || (yield question('What is the domain of this certificate? '+(domain?'('+domain+')':'')+': ')) || domain;
+	} while (!domain);
+
+	// retrive the key and keep asking if it's not provided
+	do{
+		key = answers.key || (yield question('Please provide the path to the private key to use? '));
+	} while (!key);
+
+	// retrive the cert and keep asking if it's not provided
+	do{
+		cert = answers.cert || (yield question('Please provide the path to the certificate to use? '));
+	} while (!cert);
+
+	ca = answers.ca || (yield question('Please the path to the certificate authority file to use? (Optional)')) || '';
+
+	certs = certs || {};
+
+	certs[domain] = {
+		key: key,
+		cert: cert,
+		ca: ca
+	};
+	return certs;
+}
+
 $c.syncroit(function*() {
-	var question = $c.yieldable(rl.question, rl), answer,
-		yes = {yes: 1, y: 1},
-		no = {no: 1, n: 1};
-
-
-
-	var port = (process.argv[2] || (yield question('What port should proxy run on? (80): ')) || 80).toString().split(',');
-	var host = (process.argv[3] ? (process.argv[3] == "*" ? "" : process.argv[3].toString()) : (yield question('What host can access this proxy? (*): '))).split(',');
+	var answer;
+	var port = (process.argv[PORTS] || (yield question('What port should proxy run on? (80): ')) || 80).toString().split(',');
+	var host = (process.argv[HOSTS] ? (process.argv[HOSTS] == "*" ? "" : process.argv[HOSTS].toString()) : (yield question('What host can access this proxy? (*): '))).split(',');
+	var dhostport = (process.argv[HOSTS] ? (process.argv[HOSTS] == "*" ? "" : process.argv[HOSTS].toString()) : (yield question('What is the default host/port to use? (localhost:8080): '))).split(':');
+	var dhost = dhostport[0] || "localhost";
+	var dport = dhostport[1] || "8080";
 
 	port.map(function(p){ return parseInt(p); });
 
-	var routes, content;
-	if (content = process.argv[3]) {
-		if (content.indexOf("{") != -1) {
+	var routes, content, certs;
+	if (content = process.argv[CONFIG]) {
+		if (content.indexOf("{") == -1) {
 			// this is a file
-			content = yield fsread(content, 'utf8');
+			content = (yield fsread(content, 'utf8'))[1];
 
 		}
 		routes = $c.tryEval(content,JSON.parse);
@@ -63,49 +280,21 @@ $c.syncroit(function*() {
 		answer = (yield question('Do you want to configure routes now? (yes): ')) || "yes";
 		var domain = "";
 		while (answer in yes) {
-			domain = (yield question('What is FQDN or IP for this route? '+(domain?'('+domain+')':'')+': ')) || domain;
-			var rhost = ((yield question('What host will this route be forwarding to? (localhost): ')) || "localhost").split(',');
-			var rport = ((yield question('What port will this route be forwarding to? (80): ')) || "80").split(',');
-			var rpathdestination = (yield question('What path will this route be forwarding to? (/): ')) || '/';
-			var rpathreq = (yield question('What outfacing path relative to the domain? (/): ')) || '/';
-
-			var enableAuth = (yield question('Do you want to enable HTTP Basic Authentication? (no): ')) in yes,
-				auth_username, auth_password;
-
-			if (enableAuth) {
-				auth_username = (yield question('What is the username? (admin): ')) || 'admin';
-				auth_password = (yield question('What is the password? (admin): ')) || 'admin';
-			}
-			var headers = {};
-			var hasHeaders = (yield question('Are there any headers to overwrite with each request to this route? (no): ')) || "no";
-			while (hasHeaders in yes) {
-				var hname = yield question('What is the name of the header? ');
-				var hval = yield question('What is the value of the header? ');
-				headers[hname] = hval;
-				hasHeaders = (yield question('Do you want to add more headers? (yes): ')) || "yes";
-			}
-			var allowed = ((yield question('What hosts can access this route? (*): ')) || "*").split(',');
-			var verbs = ((yield question('What methods can be used to access this route? (get,post,put,delete): ')) || "get,post,put,delete").toLowerCase().split(',');
-
-			routes[domain] = routes[domain] || [];
-			routes[domain].push({
-				host: rhost,
-				port: rport,
-				verbs: verbs,
-				allow: allowed,
-				headers: headers,
-				path: rpathdestination,
-				request_path: rpathreq,
-				domain: domain,
-				http_auth: enableAuth,
-				http_username: auth_username,
-				http_password: auth_password
-			});
-
+			yield* addRoute(domain, routes);
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
 		}
 	}
-	var ncontent = JSON.stringify({host:host,port:port,routes:routes});
+
+	if (!certs) {
+		certs = {};
+		answer = (yield question('Do you want to add ssl certs now? (no): ')) || "no";
+		var domain = "";
+		while (answer in yes) {
+			yield* addSSL(domain, certs);
+			answer = (yield question('Do you want to add anther ssl cert? (yes): ')) || "yes";
+		}
+	}
+	var ncontent = JSON.stringify({host:host, port:port, certs:certs, routes:routes, DEFAULT:{ host:[dhost], port:[dport] } }, null, 4);
 
 	var dirpath = __dirname.replace('/bin','');
 	yield run("mkdir -p \"" + configdir + "\";");

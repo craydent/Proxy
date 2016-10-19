@@ -1,7 +1,9 @@
+<img src="http://craydent.com/JsonObjectEditor/img/svgs/craydent-logo.svg" width=75 height=75/>
+
 # Craydent Reverse Proxy 0.1.21
 **by Clark Inada**
 
-This module is a reverse proxy server implemented in node.  There are 2 ways to use: global install/standalone or as a module.  When used as a standalone, a config file is create in /var/craydentdeploy/config/craydent-proxy/pconfig.json and will auto update the routes if the file is changed.  This happens as well when used as a module and a file is provided as a config.  This eliminates the need to restart the server for a configuration and/or route update.
+This module is a reverse proxy server implemented in node.  There are 2 ways to use: global install/standalone or as a module.  When used as a standalone, a config file is create in /var/craydent/config/craydent-proxy/pconfig.json and will auto update the routes if the file is changed.  This happens as well when used as a module and a file is provided as a config.  This eliminates the need to restart the server for a configuration and/or route update.
 
 ## Standalone
 ```shell
@@ -12,15 +14,20 @@ $ sudo cproxy
 Once installed and configured, the cproxy command without arguments will restart the craydent-proxy server.
 
 ### CLI
+All * arguments are required.
+
+#### Initialize
 
 ```shell
-$ sudo cproxy '80,443' '*' /var/path/to/route_definition.json
+$ sudo cproxy '{{80,443}}' '*' '{{host:port}}' {{/var/path/to/route_definition.json}}
 ```
 
-cproxy can take 3 arguments: ports, hosts, and route_definition.json (file path or json string).
-* ports - Comma delimited list of ports to run proxy on.
-* hosts - Comma delimited list of domains able to access proxy.
-* route definition - json file or string defining the routes to initialize proxy with. Example json is shown below:
+cproxy can take 4 arguments: ports, hosts, default host/port, and route_definition.json (file path or json string).  When arguments are missing, the CLI will ask a series of questions to obtain the missing arguments.
+
+1. ports - Comma delimited list of ports to run proxy on.
+2. hosts - Comma delimited list of domains able to access proxy.
+3. route default - default host and port when a requested route is not found. (default is localhost:8080)
+4. route definition - json file or string defining the routes to initialize proxy with. Example json is shown below:
 
 Note: routes are processed/matched in order.  If there are more hosts then ports (or vise versa) the last port that was provided is used. 
 
@@ -74,18 +81,95 @@ The first route configures the server to forward the request when a request is m
 `http://sub.example.com/websocket/index.html` will be forwarded to `http://localhost:3000/websocket/index.html` but will first check access via http authentication.
 The second route for sub.example.com configures all other requests to the server to forward to `http://craydent.com:8080`.  `http://sub.example.com/index.html` will be forwarded to `http://craydent.com:8080/home/index.html`.
 
+#### Add Route
 
+```shell
+$ sudo cproxy add '{{www.example.com}}' {{example route}}' '{{localhost,example2.com}}' '{{3000,80}}' '{{/request/path/*}}' '{{/destination path}}' '{{auth user}}' '{{auth password}}' '{{headers as json}}}' '{{allowed domains (default:*)}}' '{{allowed methods (default:get,post,put,delete)}}' '{{route index(default:adds at the end)}}'
+```
+
+cproxy add can take 12 arguments.  When arguments are missing, the CLI will ask a series of questions to obtain the missing arguments.
+
+1. domain - fully qualified domain name.
+2. name - name/alias of the route.
+3. hosts - hosts the request will forward to (comma delimited).
+4. ports - ports the request will forward to (comma delimited).
+5. request path - path being requested.
+6. destination path - destination path to forward to.
+7. http auth username - username to login with to access the route (HTTP AUTH).
+8. http auth password - password to login with to access the route (HTTP AUTH).
+9. headers - (JSON) headers to override when the request header exists.
+10. allowed domains - domains allowed to access the route.
+11. allowed http methods - http methods allowed on the route (ex: get, post, put, delete).
+12. route index - precedence index to insert in routes array.
+
+#### Remove Route(s)
+
+```shell
+$ sudo cproxy rm '{{www.example.com}}' '{{example route}}'
+```
+
+cproxy rm takes 2 arguments.
+
+1. *domain - fully qualified domain name of the route.
+2. name - name/alias of the route to be removed.
+###**Note: If name is omitted, all routes for that domain will be removed.
+
+
+#### View Route
+
+```shell
+$ sudo cproxy cat '{{www.example.com}}' '{{example route}}'
+```
+
+cproxy cat takes 2 arguments.
+
+1. *domain - fully qualified domain name of the route.
+2. *name - name/alias of the route.
+
+#### Add SSL certificate
+
+```shell
+$ sudo cproxy addssl '{{www.example.com}}' '{{/path/to/key}}' '{{/path/to/certificate}}' '{{/path/to/ca}}'
+```
+
+cproxy addssl can take up 4 arguments.
+
+1. *domain - domain for the certificate.
+2. *key - private key (file path or string).
+3. *certifiate - certificate (file path or string).
+4. certificate authority - certificate authority to check agains (file path or string).
+
+#### Remove SSL certificate
+
+```shell
+$ sudo cproxy rmssl '{{www.example.com}}'
+```
+
+cproxy rmssl takes 1 argument.
+
+1. *domain - domain for the certificate.
+	
 ## Node.js module
 ```shell
 $ npm i --save craydent-proxy
 ```
 
 pconfig.json example & structure (this is the default that is used when no config is available)
+Note: If there are more hosts or ports than protocols the last protocol that was provided is used for the subsequent hosts and ports.
+ - Valid protocols are:
+ 
+ * http
+ * https
+ * ssl
+ * tls
+   
 ```js
 {
     "port" : ["80"],
     "host" : [""],
     "routes" : {},
+    "protocol": [""],
+    "certs": {},
     "DEFAULT": { "host": ["localhost"], "port": ["8080"] }
 }
 ```
@@ -100,7 +184,7 @@ var Proxy = require('craydent-proxy');
 var server = new Proxy('pconfig.json');
 ```
 ```js
-// default location of config is /var/craydentdeploy/config/craydent-proxy/pconfig.json
+// default location of config is /var/craydent/config/craydent-proxy/pconfig.json
 var Proxy = require('craydent-proxy');
 var server = new Proxy();
 ```
