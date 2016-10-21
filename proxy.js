@@ -1,5 +1,5 @@
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.24                              /*/
+/*/ Craydent LLC proxy-v0.1.25                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -258,7 +258,7 @@ function Proxy(config) {
                         prot = protocols[i] || prot;
 
                         var options = { host: host, port: port},
-                            destination = net.createConnection(options);
+                            destination;
 
                         if (prot.toLowerCase() in secureProtocols) {
                             var conf = yield _get_cert_data(config.certs[fqdn]);
@@ -268,6 +268,8 @@ function Proxy(config) {
                                 rejectUnauthorized: !!config.certs.rejectUnauthorized
                             });
                             destination = tls.connect(conf);
+                        } else {
+                            destination = net.createConnection(options);
                         }
 
                         destination.on('close', function(isClosed){
@@ -305,7 +307,7 @@ function Proxy(config) {
                 var index = $c.indexOfAlt(headers,/^host\s*:\s*.*$/i);
                 for (var j = 0, jlen = src.destinations.length, hi = 0, pi = 0; j < jlen; j++) {
                     if (needToChunk) {
-                        headers[index] = "Host: " + theRoute.host[hi] + (theRoute.port[pi] ? ":" + theRoute.port[pi] : "");
+                        headers[index] = "Host: " + (theRoute.host[hi] == "localhost" ? fqdn : theRoute.host[hi]) + (theRoute.port[pi] ? ":" + theRoute.port[pi] : "");
                         theRoute.host[hi + 1] && hi++;
                         theRoute.port[pi + 1] && pi++;
                         chunk = new Buffer(headers.join(lineBreakChar));
