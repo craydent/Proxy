@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.22                              /*/
+/*/ Craydent LLC proxy-v0.1.23                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -15,6 +15,9 @@ initialize
 	3=>proxy host
 	4=>default host/port
 	5=>json string or file
+
+reset
+	2=>reset command
 
 add route
 	2=>add command
@@ -63,7 +66,7 @@ const $c = require('craydent/noConflict'),
 	question = $c.yieldable(rl.question, rl),
 
 	PORTS = 2, HOSTS = 3, DEFAULT = 4, CONFIG = 5,
-	REMOVE = 2, VIEW = 2, REMOVESSL = 2,
+	REMOVE = 2, VIEW = 2, REMOVESSL = 2, RESET = 2,
 	ADDSSL = 2, KEY = 4, CERT = 5, CA = 6,
 	ADD = 2, DOMAIN = 3, NAME = 4, RHOST = 5, RPORT = 6, RPATH = 7, DPATH = 8, AUSER = 9, APASS = 10, HEADERS = 11, ALLOWED = 12, VERBS = 13, INDEX = 14,
 	yes = {yes: 1, y: 1},
@@ -73,18 +76,23 @@ var projectname = "craydent-proxy",
 	configdir = "/var/craydent/config/" + projectname + "/",
 	config = $c.include(configdir + 'pconfig.json');
 
-if (process.argv[VIEW] == 'cat') {
+if (process.argv[RESET] == 'reset') {
 	return $c.syncroit(function*() {
-		var name = process.argv[NAME],
-			domain = process.argv[DOMAIN];
-
-		if (!domain && !name) { console.log(JSON.stringify(config,null,2)); }
-		else if (!config.routes[domain]) { console.log("No such domain",domain) }
-		else if (!name) { console.log(JSON.stringify(config.routes[domain],null,2)); }
-		else { console.log(JSON.stringify($c.where(config.routes[domain],{name: name})[0] || "No such route",null,2)); }
+		yield run(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
 		console.log('Complete');
 		process.exit();
 	});
+}
+if (process.argv[VIEW] == 'cat') {
+	var name = process.argv[NAME],
+		domain = process.argv[DOMAIN];
+
+	if (!domain && !name) { console.log(JSON.stringify(config,null,2)); }
+	else if (!config.routes[domain]) { console.log("No such domain",domain) }
+	else if (!name) { console.log(JSON.stringify(config.routes[domain],null,2)); }
+	else { console.log(JSON.stringify($c.where(config.routes[domain],{name: name})[0] || "No such route",null,2)); }
+	console.log('Complete');
+	process.exit();
 }
 if (process.argv[ADD] == 'add') {
 	return $c.syncroit(function*() {
