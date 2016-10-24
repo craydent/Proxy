@@ -1,6 +1,6 @@
 <img src="http://craydent.com/JsonObjectEditor/img/svgs/craydent-logo.svg" width=75 height=75/>
 
-# Craydent Reverse Proxy 0.1.25
+# Craydent Reverse Proxy 0.1.26
 **by Clark Inada**
 
 This module is a reverse proxy server implemented in node.  There are 2 ways to use: global install/standalone or as a module.  When used as a standalone, a config file is create in /var/craydent/config/craydent-proxy/pconfig.json and will auto update the routes if the file is changed.  This happens as well when used as a module and a file is provided as a config.  This eliminates the need to restart the server for a configuration and/or route update.
@@ -81,6 +81,14 @@ The first route configures the server to forward the request when a request is m
 `http://sub.example.com/websocket/index.html` will be forwarded to `http://localhost:3000/websocket/index.html` but will first check access via http authentication.
 The second route for sub.example.com configures all other requests to the server to forward to `http://craydent.com:8080`.  `http://sub.example.com/index.html` will be forwarded to `http://craydent.com:8080/home/index.html`.
 
+#### Stop/Terminate
+
+```shell
+$ sudo cproxy stop
+```
+
+cproxy stop takes no arguments.  This will terminate the craydent-proxy process.
+
 #### Reset
 
 ```shell
@@ -88,6 +96,14 @@ $ sudo cproxy reset
 ```
 
 cproxy reset takes no arguments.  This will remove configuration/log files and reset the state to a freshly installed state.
+
+#### Uninstall
+
+```shell
+$ sudo cproxy uninstall
+```
+
+cproxy uninstall takes no arguments.  This will remove configuration/log files and and uninstalled the global module.
 
 #### Add Route
 

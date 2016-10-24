@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.25                              /*/
+/*/ Craydent LLC proxy-v0.1.26                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -66,7 +66,7 @@ const $c = require('craydent/noConflict'),
 	question = $c.yieldable(rl.question, rl),
 
 	PORTS = 2, HOSTS = 3, DEFAULT = 4, CONFIG = 5,
-	REMOVE = 2, VIEW = 2, REMOVESSL = 2, RESET = 2,
+	REMOVE = 2, VIEW = 2, REMOVESSL = 2, RESET = 2, UNINSTALL = 2, STOP = 2,
 	ADDSSL = 2, KEY = 4, CERT = 5, CA = 6,
 	ADD = 2, DOMAIN = 3, NAME = 4, RHOST = 5, RPORT = 6, RPATH = 7, DPATH = 8, AUSER = 9, APASS = 10, HEADERS = 11, ALLOWED = 12, VERBS = 13, INDEX = 14,
 	yes = {yes: 1, y: 1},
@@ -79,6 +79,14 @@ var projectname = "craydent-proxy",
 if (process.argv[RESET] == 'reset') {
 	return $c.syncroit(function*() {
 		yield run(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+		console.log('Complete');
+		process.exit();
+	});
+}
+if (process.argv[UNINSTALL] == 'uninstall') {
+	return $c.syncroit(function*() {
+		yield run(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+		yield run("npm uninstall -g craydent-proxy;");
 		console.log('Complete');
 		process.exit();
 	});
@@ -151,7 +159,7 @@ if (process.argv[REMOVE] == 'rm') {
 			domain = process.argv[DOMAIN];
 
 		if (!name) {
-			var answer = (yield question('This cannot be undone. Are you sure you want to remove all routes for this domain? (type the domain to confirm)')) || 'no';
+			var answer = (yield question('This cannot be undone. Are you sure you want to remove all routes for this domain? (type the domain to confirm) ')) || 'no';
 			if (answer == domain) {
 				delete config.routes[domain];
 			} else {
@@ -172,6 +180,12 @@ if (process.argv[REMOVESSL] == 'rmssl') {
 
 		yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
 		console.log('Complete');
+		process.exit();
+	});
+}
+if(process.argv[STOP] == 'stop') {
+	return $c.syncroit(function*(){
+		yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + " stop;");
 		process.exit();
 	});
 }
