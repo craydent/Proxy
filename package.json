@@ -1,14 +1,15 @@
 {
-  "name": "@craydent/craydent-proxy",
-  "version": "0.1.26",
+  "name": "@craydent/proxy",
+  "version": "0.1.27",
   "description": "Proxy service in node",
   "main": "proxy.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "publish": "git push public;"
   },
   "repository": {
     "type": "git",
-    "url": "git@bitbucket.org:craydent/craydent-proxy.git"
+    "url": "git@bitbucket.org:craydent/proxy.git"
   },
   "bin":{
     "cproxy":"./bin/reverse-proxy"
@@ -24,5 +25,5 @@
   ],
   "author": "Clark Inada",
   "license": "MIT",
-  "homepage": "https://bitbucket.org/craydent/craydent-proxy#readme"
+  "homepage": "https://bitbucket.org/craydent/proxy#readme"
 }

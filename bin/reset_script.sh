@@ -1,6 +1,6 @@
 #!/bin/bash
 #/*/---------------------------------------------------------/*/
-#/*/ Craydent LLC proxy-v0.1.26                              /*/
+#/*/ Craydent LLC proxy-v0.1.27                              /*/
 #/*/ Copyright 2011 (http://craydent.com/about)              /*/
 #/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 #/*/ (http://craydent.com/license)                           /*/

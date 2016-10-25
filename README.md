@@ -1,6 +1,6 @@
 <img src="http://craydent.com/JsonObjectEditor/img/svgs/craydent-logo.svg" width=75 height=75/>
 
-# Craydent Reverse Proxy 0.1.26
+# Craydent Reverse Proxy 0.1.27
 **by Clark Inada**
 
 This module is a reverse proxy server implemented in node.  There are 2 ways to use: global install/standalone or as a module.  When used as a standalone, a config file is create in /var/craydent/config/craydent-proxy/pconfig.json and will auto update the routes if the file is changed.  This happens as well when used as a module and a file is provided as a config.  This eliminates the need to restart the server for a configuration and/or route update.
@@ -35,6 +35,8 @@ Note: routes are processed/matched in order.  If there are more hosts then ports
 {
     // these are the domains which the server be requested on 
     "sub.example.com": [{
+        // name is the identifier of the route and must be unique (best practice would be to prefix name with project name)
+        "name": "project1_websocket"
         // host is the destination to forward the request
         "host": ["localhost"],
         // port is the port to forward on the destination
@@ -54,6 +56,7 @@ Note: routes are processed/matched in order.  If there are more hosts then ports
         "http_username": "user",
         "http_password": "password"
     },{
+        "name": "project1_home"
         "host": ["craydent.com"],
         "port": ["8080"],
         "verbs": ["get", "post", "put", "delete"],
@@ -64,6 +67,7 @@ Note: routes are processed/matched in order.  If there are more hosts then ports
         "http_auth": false
     }],
     "example2.com": [{
+        "name": "project2_root"
         "host": ["localhost"],
         "port": ["3001"],
         "verbs": ["get", "post", "put", "delete"],
@@ -216,7 +220,8 @@ var server = new Proxy();
 
 ## Download
 
- * [GitHub](https://github.com/craydent/Craydent-Proxy/)
- * [BitBucket](https://bitbucket.org/craydent/craydent-proxy)
+ * [GitHub](https://github.com/craydent/Proxy/)
+ * [BitBucket](https://bitbucket.org/craydent/proxy)
+ * [GitLab](https://gitlab.com/craydent/proxy)
 
 Craydent-Proxy is released under the [Dual licensed under the MIT or GPL Version 2 licenses](http://craydent.com/license).<br>
