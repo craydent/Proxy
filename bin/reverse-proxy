@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.27                              /*/
+/*/ Craydent LLC proxy-v0.1.28                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -168,7 +168,7 @@ if (process.argv[REMOVE] == 'rm') {
 			}
 		} else {
 			console.log('removed',$c.delete(config.routes[domain],{name: name}));
-			if ($c.isEmpty(routes[domain])) { delete config.routes[domain]; }
+			if ($c.isEmpty(config.routes[domain])) { delete config.routes[domain]; }
 		}
 		yield fswrite(configdir + "pconfig.json", JSON.stringify(config,null,4));
 		console.log('Complete');
