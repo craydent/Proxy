@@ -1,5 +1,5 @@
 {
-  "name": "@craydent/proxy",
+  "name": "craydent-proxy",
   "version": "1.0.0",
   "description": "Proxy service in node",
   "main": "proxy.js",
