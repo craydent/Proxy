@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v0.1.28                              /*/
+/*/ Craydent LLC proxy-v1.0.0                              /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -66,7 +66,7 @@ const $c = require('craydent/noConflict'),
 	question = $c.yieldable(rl.question, rl),
 
 	PORTS = 2, HOSTS = 3, DEFAULT = 4, CONFIG = 5,
-	REMOVE = 2, VIEW = 2, REMOVESSL = 2, RESET = 2, UNINSTALL = 2, STOP = 2,
+	REMOVE = 2, VIEW = 2, REMOVESSL = 2, RESET = 2, UNINSTALL = 2, STOP = 2, VERSION = 2,
 	ADDSSL = 2, KEY = 4, CERT = 5, CA = 6,
 	ADD = 2, DOMAIN = 3, NAME = 4, RHOST = 5, RPORT = 6, RPATH = 7, DPATH = 8, AUSER = 9, APASS = 10, HEADERS = 11, ALLOWED = 12, VERBS = 13, INDEX = 14,
 	yes = {yes: 1, y: 1},
@@ -76,6 +76,10 @@ var projectname = "craydent-proxy",
 	configdir = "/var/craydent/config/" + projectname + "/",
 	config = $c.include(configdir + 'pconfig.json');
 
+if (process.argv[VERSION] == "version" || process.argv[VERSION] == "--version" || process.argv[VERSION] == "-v") {
+	console.log(require('../package.json').version);
+	return process.exit();
+}
 if (process.argv[RESET] == 'reset') {
 	return $c.syncroit(function*() {
 		yield run(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
