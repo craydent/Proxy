@@ -1,6 +1,6 @@
 {
   "name": "craydent-proxy",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "Proxy service in node",
   "main": "proxy.js",
   "scripts": {
@@ -15,8 +15,7 @@
     "cproxy":"./bin/reverse-proxy"
   },
   "dependencies": {
-    "craydent" : "~0.6.19",
-    "shelljs": "0.5.3"
+    "craydent" : "^0.7.0"
   },
   "keywords": [
     "craydent",

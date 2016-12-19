@@ -1,5 +1,5 @@
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v1.0.0                              /*/
+/*/ Craydent LLC proxy-v1.1.2                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -16,23 +16,29 @@ route: {
         request_path:"", // path or path pattern to match from the request
         domain: "",      // same as fqdn
         http_auth:false, // flag to enable http authentication
-        http_username:"",// http authentication username
-        http_password:"",// http authentication password
+        http_users: {// http authentication users
+            "username": {
+                password: "password",
+                access: ["*","addadminuser"]
+            }
+        }
     }]
 }
 */
-const $c = require('craydent/noConflict');
-const $g = global;
-const net = require('net');
-const tls = require('tls');
-const util = require("util");
-const fs = require("fs");
-const fsread = $c.yieldable(fs.readFile, fs);
-const EventEmitter = require('events').EventEmitter;
-const lineBreakChar = '\r\n';
-const secureProtocols = {"https":1,"tls":1,"ssl":1};
 
-var onerror;
+const pkg = require('./package.json'),
+    ns = !pkg.name.indexOf('@craydent/') ? "@craydent/" : "";
+
+const $c = require(ns + 'craydent/noConflict'),
+    $g = global, net = require('net'), tls = require('tls'), util = require("util"),
+
+    fs = require("fs"), fsread = $c.yieldable(fs.readFile, fs),
+    EventEmitter = require('events').EventEmitter, lineBreakChar = '\r\n', secureProtocols = {"https":1,"tls":1,"ssl":1};
+
+var utils = require('./libs/utils'),
+    correct_password = utils.correct_password,
+    authorized = utils.authorized,
+    onerror;
 
 $g.DEFAULT_HTTP_PORT = 80;
 $c.DEBUG_MODE = true;
@@ -61,16 +67,23 @@ function Proxy(config) {
         config_path = config || config_path;
         config = $c.include(config_path);
         var cb = function(event_type){
-            if(event_type == "change") {
-                config = _reload_config(config, config_path);
-                port = config.port;
-                host = config.host;
-                routes = config.routes;
-                certs = config.certs;
-                route_default = config.DEFAULT;
+            try {
+                if (event_type == "change") {
+                    config = _reload_config(config, config_path);
+                    port = config.port;
+                    host = config.host;
+                    routes = config.routes;
+                    certs = config.certs;
+                    route_default = config.DEFAULT;
+                } else if (event_type == "rename") {
+                    watcher && watcher.close();
+                    try { watcher = fs.watch(config_path, cb); } catch (e) {e.errno == "ENOENT" ? flog(config_path +" not found: using default config") : flog(e); }
+                }
+            } catch (e) {
+                flog(e);
             }
-        };
-        try { fs.watch(config_path, cb); } catch (e) {e.errno == "ENOENT" ? flog(config_path +" not found: using default config") : flog(e); }
+        }, watcher;
+        try { watcher = fs.watch(config_path, cb); } catch (e) {e.errno == "ENOENT" ? flog(config_path +" not found: using default config") : flog(e); }
         if (!config) { try { require(config_path); } catch(e){ flog(e); }}
     }
     flog('proxy initalized');
@@ -89,6 +102,7 @@ function Proxy(config) {
         source.start = $c.now();
         source.on('data',function(chunk) {
             var src = this;
+            src.id = src.id || $c.suid();
             $c.syncroit(function* () {
                 var headers = chunk.toString('utf-8').split(lineBreakChar);
                 self.emit('data', chunk);
@@ -107,9 +121,13 @@ function Proxy(config) {
 
                 var route = src.route,
                     fqdnheader = headers.filter(function(line){ return $c.startsWith(line.toLowerCase(),'host'); })[0],
-                    fqdn = src.fqdn || (fqdnheader ? fqdnheader.replace(/^host\s*:\s*(.*)$/i,'$1') : ""),
-                    needToChunk = !route || headers.length > 1,
-                    theRoute = route == "DEFAULT" ? route_default :
+                    rfqdn = src.rfqdn = (fqdnheader ? fqdnheader.replace(/^host\s*:\s*(.*)$/i,'$1') : ""),
+                    fqdn = src.fqdn || rfqdn,
+                    needToChunk = !route || headers.length > 1;
+
+                    if (!routes[fqdn]) { fqdn = _get_domain_match(routes, fqdn); }
+
+                var theRoute = route == "DEFAULT" ? route_default :
                         routes[fqdn] && routes[fqdn].filter(function(rt){ return rt.request_path == route; })[0],
                     useCurrentRoute = false,
                     _l1parts = headers[0].split(' '),
@@ -158,10 +176,13 @@ function Proxy(config) {
 
                     headers[0] = src.header = theRoute ? src.header.replace(old_path, req_path) : src.header;
                 }
-                flog("=>" + src.header);
+                flog("request source: " + rfqdn);
+                //var request_cout = "=> " + src.header + " [" +src.id + "]";
+                var request_cout = "=> ${header} to ${rfqdn} [${id}]";
                 if (!theRoute) {
                     route = 'DEFAULT';
                     if(!(theRoute = route_default)) {
+                        flog($c.fillTemplate(request_cout, src));
                         if ($c.indexOfAlt(headers,/User-Agent: ELB-HealthChecker/) != -1) {
                             return _send(self, src, 200, $c.RESPONSES[200],null,src.header, true);
                         } else {
@@ -177,7 +198,7 @@ function Proxy(config) {
                 if (theRoute.http_auth) {
                     var authHeaderString = headers.filter(function(line){ return $c.startsWith(line.toLowerCase(),'authorization'); })[0],
                         auth = authHeaderString ? authHeaderString.replace(/^authorization\s*:\s*(.*)$/i,'$1') : "",
-                        auth_header = {'WWW-Authenticate: Basic realm': theRoute.domain + 'Secure Area'};
+                        auth_header = {'WWW-Authenticate': 'Basic realm="' + theRoute.domain + ' Secure Area"'};
 
                     if (!auth) {     // No Authorization header was passed in so it's the first time the browser hit us
                         var body = '<html><body>You are trying to access a secure area.  Please login.</body></html>';
@@ -192,7 +213,7 @@ function Proxy(config) {
                         username = creds[0],
                         password = creds[1];
 
-                    if (username != theRoute.http_username || password != theRoute.http_password) {
+                    if (!theRoute.http_users[username] || !correct_password(password, theRoute.http_users[username].password)) {
                         var body = '<html><body>You are not authorized to access this page</body></html>';
                         return _send(self, src, 401, body, auth_header,src.header);
                     }
@@ -212,6 +233,7 @@ function Proxy(config) {
                         if (headerVal.constructor == Function) {
                             headerVal = headerVal(head,headers[i].substr(index + 1).trim(),headers[i]);
                         }
+                        if (/^host$/i.test(head)) { src.rfqdn = headerVal; }
                         headers[i] = $c.capitalize(head) + ": " + headerVal;
                         heads.push(head,$c.capitalize(head),head.toLowerCase());
                     }
@@ -221,6 +243,8 @@ function Proxy(config) {
                     }
                 }
                 needToChunk && (chunk = new Buffer(headers.join(lineBreakChar)));
+
+                flog($c.fillTemplate(request_cout, src));
 
                 var allow = theRoute.allow;
                 if (allow && (allow.indexOf('*') == -1)) {
@@ -296,7 +320,7 @@ function Proxy(config) {
                         });
                         if (!src.destinations.length) {
                             destination.on('end',function(){
-                                flog("<=" + src.header + " 200 " + $c.RESPONSES[200].message);
+                                flog("<= " + src.header + " 200 " + $c.RESPONSES[200].message + " [" +src.id + "]");
                                 source.destroy();
                             });
                         }
@@ -307,7 +331,7 @@ function Proxy(config) {
                 var index = $c.indexOfAlt(headers,/^host\s*:\s*.*$/i);
                 for (var j = 0, jlen = src.destinations.length, hi = 0, pi = 0; j < jlen; j++) {
                     if (needToChunk) {
-                        headers[index] = "Host: " + (theRoute.host[hi] == "localhost" ? fqdn : theRoute.host[hi]) + (theRoute.port[pi] ? ":" + theRoute.port[pi] : "");
+                        headers[index] = "Host: " + (theRoute.host[hi] == "localhost" ? rfqdn : theRoute.host[hi]) + (theRoute.port[pi] ? ":" + theRoute.port[pi] : "");
                         theRoute.host[hi + 1] && hi++;
                         theRoute.port[pi + 1] && pi++;
                         chunk = new Buffer(headers.join(lineBreakChar));
@@ -329,6 +353,7 @@ function Proxy(config) {
                 SNICallback: function (domain, cb) {
                     $c.syncroit(function* () {
                         var cert = certs[domain];
+                        if (!cert) { cert = certs[_get_domain_match(certs,domain)]; }
                         if (cert) {
                             var conf = yield _get_cert_data(cert);
                             cb(null, tls.createSecureContext(conf));
@@ -358,6 +383,12 @@ function Proxy(config) {
     }
     return self;
 }
+function _get_domain_match (domains, domain){
+    for (var dpattern in domains) {
+        var regex = new RegExp("^" + $c.replace_all(dpattern, "*", ".*?") + "$");
+        if (regex.test(domain)) { return dpattern; }
+    }
+}
 function _get_cert_data (cert_data) {
     return $c.syncroit(function* () {
         var data = {},
@@ -370,8 +401,10 @@ function _get_cert_data (cert_data) {
 
         for (var i = 0, len = fields.length; i < len; i++) {
             var field = fields[i];
-            if ($c.isString(tmp[field])) {
-                data[field] = (yield fsread(field))[1];
+            if ($c.isString(tmp[field]) && !~tmp[field].indexOf('\n')) {
+                data[field] = (yield fsread(tmp[field]))[1];
+            } else if ($c.isString(tmp[field]) && ~tmp[field].indexOf('\n')) {
+                data[field] = tmp[field];
             } else if ($c.isArray(tmp[field])) {
                 data[field] = tmp[field].join('\n');
             }
@@ -404,7 +437,7 @@ function _reload_config(proxy, cpath, out) {
 function _send (self, source, statusCode, data, headers, hline1, destroy) {
     try {
         if (source.destroyed || source.closed) { return; }
-        flog("<=" + hline1 + " " + statusCode + " " + (data.message || data));
+        flog("<= " + hline1 + " " + statusCode + " " + (data.message || data));
         headers = headers || {};
         var harray = [];
         if ($c.isObject(headers)) {
@@ -458,14 +491,13 @@ function _config_validator (config) {
             "DEFAULT": { "host": ["localhost"], "port": ["8080"] }
         };
     }
+    config = JSON.parseAdvanced(config);
     var error = "";
     config.routes = config.routes || {};
     config.certs = config.certs || {};
     config.port = config.port || "";
     config.host = config.host || "";
     config.protocol = config.protocol || "";
-    config.HTTP_AUTH_USERNAME = config.HTTP_AUTH_USERNAME || "";
-    config.HTTP_AUTH_PASSWORD = config.HTTP_AUTH_PASSWORD || "";
 
     var droutes = config.routes;
 
@@ -484,6 +516,7 @@ function _config_validator (config) {
             route.request_path = route.request_path || "/";
             route.domain = route.domain || domain;
             route.http_auth = route.http_auth || false;
+            route.http_users = route.http_users || {};
 
             // check for errors
             if (typeof route.path != "string") {
@@ -504,5 +537,5 @@ function _config_validator (config) {
     return config;
 }
 util.inherits(Proxy, EventEmitter);
-Proxy.VERSION = require('./package.json').version;
+Proxy.VERSION = pkg.version;
 module.exports = Proxy;

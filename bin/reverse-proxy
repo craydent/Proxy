@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v1.0.0                              /*/
+/*/ Craydent LLC proxy-v1.1.2                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -51,53 +51,354 @@ add cert
 	5=>certificate (file path or string)
 	6=>certificate authority (file path or string)
 */
-const $c = require('craydent/noConflict'),
-	$s = require('shelljs'),
+const pkg = require('../package.json'),
+	ns = !pkg.name.indexOf('@craydent/') ? "@craydent/" : "";
+
+const $c = require(ns + 'craydent/noConflict'),
+//const $c = require('../node_modules/' + ns + 'craydent/noConflict'),
 	readline = require('readline'),
 	fs = require('fs'),
 
 	fswrite = $c.yieldable(fs.writeFile,fs),
 	fsread = $c.yieldable(fs.readFile,fs),
-	run = $c.yieldable($s.exec, $s),
 	rl = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout
 	}),
 	question = $c.yieldable(rl.question, rl),
-
-	PORTS = 2, HOSTS = 3, DEFAULT = 4, CONFIG = 5,
-	REMOVE = 2, VIEW = 2, REMOVESSL = 2, RESET = 2, UNINSTALL = 2, STOP = 2, VERSION = 2,
-	ADDSSL = 2, KEY = 4, CERT = 5, CA = 6,
-	ADD = 2, DOMAIN = 3, NAME = 4, RHOST = 5, RPORT = 6, RPATH = 7, DPATH = 8, AUSER = 9, APASS = 10, HEADERS = 11, ALLOWED = 12, VERBS = 13, INDEX = 14,
 	yes = {yes: 1, y: 1},
 	no = {no: 1, n: 1};
 
-var projectname = "craydent-proxy",
+var utils = require('../libs/utils'),
+	encrypt_password = utils.encrypt_password,
+
+	projectname = "craydent-proxy",
 	configdir = "/var/craydent/config/" + projectname + "/",
 	config = $c.include(configdir + 'pconfig.json');
 
-if (process.argv[VERSION] == "version" || process.argv[VERSION] == "--version" || process.argv[VERSION] == "-v") {
-	console.log(require('../package.json').version);
+if (config) { config = JSON.parseAdvanced(config); }
+
+var CL = new $c.CLI({
+	name:"Craydent Proxy CLI",
+	synopsis:"Command line interface to perform various proxy administrative tasks.",
+	description:"This CLI provides the ability to initialize Craydent Proxy, stop, reset, uninstall, view routes, add/remove routes, add/remove ssl certs."
+});
+CL
+// ssl commands
+	.command("addssl",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-k,--key",
+		type:"string",
+		description:"ssl [k]key for the domain."
+	}, {
+		option: "-c,--cert",
+		type:"string",
+		description:"ssl [c]ertificate for the domain."
+	}, {
+		option: "-a,--authority",
+		type:"string",
+		description:"ssl certificate [a]uthority to check against."
+	}]).
+		action(addssl)
+	.command("rmssl",[{
+		option: "-d,--domain",
+		type:"string",
+		required: true,
+		description:"[d]omain where the route exists."
+	}]).
+		action(rmssl);
+
+CL
+// add command options
+	.add({
+		option: "-d,--domain",
+		type:"string",
+		command:"add",
+		description:"Fully qualified [d]omain name for the route."
+	})
+	.add({
+		option: "-n,--name",
+		type:"string",
+		command:"add",
+		description:"[n]ame/alias for the route."
+	})
+	.add({
+		option: "-h,--host",
+		type:"string",
+		command:"add",
+		description:"[h]osts the request will forward to (comma delimit when multiple destinations)."
+	})
+	.add({
+		option: "-p,--port",
+		type:"string",
+		command:"add",
+		description:"[p]orts the request will forward to (comma delimit when multiple destinations)."
+	})
+	.add({
+		option: "-r,--request-path",
+		type:"string",
+		command:"add",
+		description:"[r]equest url pattern to match when proxy receives the request."
+	})
+	.add({
+		option: "-x,--destination-path",
+		type:"string",
+		command:"add",
+		description:"destination path to forward to."
+	})
+	.add({
+		option: "-u,--user",
+		type:"string",
+		command:"add",
+		description:"http auth username for authentication (comma delimit when multiple users)."
+	})
+	.add({
+		option: "-w,--password",
+		type:"string",
+		command:"add",
+		description:"http auth pass[w]ord for authentication (comma delimit when multiple users)."
+	})
+	.add({
+		option: "-e,--header",
+		type:"string",
+		command:"add",
+		description:"h[e]aders in json format to override incoming request headers when they exist."
+	})
+	.add({
+		option: "-a,--allowed-domain",
+		type:"string",
+		command:"add",
+		description:"white list of domains [a]llowed to use this route(comma delimit when multiple domains)."
+	})
+	.add({
+		option: "-m,--allowed-method",
+		type:"string",
+		command:"add",
+		description:"[m]ethods/verbs (get,put,post,delete) allowed to use this route(comma delimit when multiple methods or '*' for all)."
+	})
+	.add({
+		option: "-i,--index",
+		type:"string",
+		command:"add",
+		description:"[i]ndex to insert the route in the precedence order."
+	})
+	.add({
+		option: "-l,--access",
+		type:"string",
+		command:"add",
+		default:"*",
+		description:"Access [l]evel to give the user."
+	}).
+		action(add);
+
+CL
+// http auth commands
+	.command("adduser",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias for the route."
+	}, {
+		option: "-u,--user",
+		type:"string",
+		required: true,
+		description:"[u]sername to add."
+	}, {
+		option: "-p,--password",
+		type:"string",
+		required: true,
+		description:"[p]assword to add."
+	}]).
+		action(adduser)
+	.command("rmuser",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias for the route."
+	}, {
+		option: "-u,--user",
+		type:"string",
+		required: true,
+		description:"[u]sername to add."
+	}]).
+		action(rmuser)
+	.command("updateuser",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias for the route."
+	}, {
+		option: "-u,--user",
+		type:"string",
+		required: true,
+		description:"[u]sername to add."
+	}, {
+		option: "-p,--password",
+		type:"string",
+		required: true,
+		description:"[p]assword to add."
+	}]).
+		action(updateuser)
+	.command("enableauth",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias for the route."
+	}]).
+		action(enabal_disable_auth)
+	.command("disableauth",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias for the route."
+	}]).
+		action(enabal_disable_auth);
+
+CL
+// general commands and options
+	.command("version  \t- indicates the current version of Craydent Proxy.").
+		action(version)
+	.command("reset    \t- resets configs to a state before Cradyent Proxy was reinitialized.").
+		action(reset)
+	.command("stop     \t- terminates the Cradyent Proxy process.").
+		action(stop)
+	.command("uninstall\t- uninstalls Craydent Proxy from the system.").
+		action(uninstall)
+	.command("rm",[{
+		option: "-d,--domain",
+		type:"string",
+		required: true,
+		description:"[d]omain where the route exists."
+	},{
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias of the route to remove."
+	}]).
+		action(rm)
+	.command("cat",[{
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	}, {
+		option: "-n,--name",
+		type:"string",
+		description:"[n]ame/alias of the route to view."
+	}]).
+		action(cat)
+	.command("load",[{
+		option: "-j,--route-json",
+		type:"string",
+		description:"[j]son file path or json string to use for defining routes."
+	},{
+			option: "-i,--index",
+			type:"string",
+			command:"add",
+			description:"[i]ndex to insert the route in the precedence order."
+		}]).
+		action(load);
+
+CL
+// init options
+	.add({
+		option: "-p,--port",
+		type:"string",
+		description:"[p]orts the for Craydent Proxy to listen on (comma delimit when multiple ports)."
+	})
+	.add({
+		option: "-h,--host",
+		type:"string",
+		description:"[h]osts the able to access proxy via TCP (comma delimit when multiple hosts or '*' for all)."
+	})
+	.add({
+		option: "-e,--default",
+		type:"string",
+		default:"localhost:8080",
+		description:"d[e]fault route to use when there are no matching routes for the request (default is localhost:8080)."
+	})
+	.add({
+		option: "-j,--route-json",
+		type:"string",
+		description:"[j]son file path or json string to use for defining routes."
+	})
+	.add({
+		option: "-d,--domain",
+		type:"string",
+		description:"[d]omain where the route exists."
+	})
+	.add({
+		option: "-k,--key",
+		type:"string",
+		description:"ssl [k]key for the domain."
+	})
+	.add({
+		option: "-c,--cert",
+		type:"string",
+		description:"ssl [c]ertificate for the domain."
+	})
+	.add({
+		option: "-a,--authority",
+		type:"string",
+		description:"ssl certificate [a]uthority to check against."
+	})
+	.add({
+		option: "-v,--version",
+		type:"string",
+		description:"indicates the current [v]ersion of Craydent Proxy."
+	}).
+		action(init).
+		action(version);
+
+if (CL.isMan) {
+	console.log(CL.renderMan());
 	return process.exit();
 }
-if (process.argv[RESET] == 'reset') {
-	return $c.syncroit(function*() {
-		yield run(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
-		console.log('Complete');
-		process.exit();
-	});
+if (CL.isHelp) {
+	console.log(CL.renderHelp());
+	return process.exit();
 }
-if (process.argv[UNINSTALL] == 'uninstall') {
-	return $c.syncroit(function*() {
-		yield run(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
-		yield run("npm uninstall -g " + require('../package.json').name + ";");
-		console.log('Complete');
-		process.exit();
-	});
+//if (CL.CommandName == "version" || CL.version === true) { version(); }
+function version () {
+//if (CL.CommandName == "version" || CL.version) {
+	if (CL.CommandName == "version" || CL.version === true) {
+		console.log(pkg.version);
+		return process.exit();
+	}
 }
-if (process.argv[VIEW] == 'cat') {
-	var name = process.argv[NAME],
-		domain = process.argv[DOMAIN];
+function* reset () {
+//if (CL.CommandName == 'reset') {
+	yield CL.exec(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+	console.log('Complete');
+	process.exit();
+}
+function* uninstall () {
+//if (CL.CommandName == 'uninstall') {
+	yield CL.exec(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+	yield CL.exec("npm uninstall -g " + pkg.name + ";");
+	console.log('Complete');
+	process.exit();
+}
+function cat () {
+//if (CL.CommandName == 'cat') {
+	var name = CL.name,
+		domain = CL.domain;
 
 	if (!domain && !name) { console.log(JSON.stringify(config,null,2)); }
 	else if (!config.routes[domain]) { console.log("No such domain",domain) }
@@ -106,119 +407,280 @@ if (process.argv[VIEW] == 'cat') {
 	console.log('Complete');
 	process.exit();
 }
-if (process.argv[ADD] == 'add') {
-	return $c.syncroit(function*() {
-		try {
-			var domain = process.argv[DOMAIN],
-				rts = {},
-				answers = {
-					name: process.argv[NAME],
-					domain: domain,
-					rhost: process.argv[RHOST],
-					rport: process.argv[RPORT],
-					rpathdestination: process.argv[DPATH],
-					rpathreq: process.argv[RPATH],
-					enableauth: process.argv[AUSER] && process.argv[APASS] ? "yes" : "no",
-					auth_username: process.argv[AUSER],
-					auth_password: process.argv[APASS],
-					has_headers: 'no',
-					headers: process.argv[HEADERS] && $c.tryEval(process.argv[HEADERS]),
-					allowed: process.argv[ALLOWED],
-					verbs: process.argv[VERBS]
-				};
+function* load () {
+//if (CL.CommandName == 'add') {
+	try {
+		var content = CL['route-json'], routes;
+		while (!content) { content = yield question('Please provide a json to load to your routes. '); }
 
-			yield* addRoute(null, rts, answers);
-			if ($c.isNull(process.argv[INDEX])) {
-				config.routes[answers.domain].push(rts[answers.domain][0]);
-			}
-			else {
-				$c.insertAt(config.routes[domain], process.argv[INDEX], rts[domain]);
-			}
 
-			yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
-			console.log('Complete');
-		} catch (e) { console.log(e); }
-		process.exit();
-	});
-}
-if (process.argv[ADDSSL] == 'addssl') {
-	return $c.syncroit(function*() {
-		var answers = {
-			key: process.argv[KEY],
-			domain: process.argv[DOMAIN],
-			cert: process.argv[CERT],
-			ca: process.argv[CA]
-		};
-		config.certs = config.certs || {};
-
-		yield* addSSL(null, config.certs, answers);
-		yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
-		console.log('Complete');
-		process.exit();
-	});
-}
-if (process.argv[REMOVE] == 'rm') {
-	return $c.syncroit(function*() {
-		var name = process.argv[NAME],
-			domain = process.argv[DOMAIN];
-
-		if (!name) {
-			var answer = (yield question('This cannot be undone. Are you sure you want to remove all routes for this domain? (type the domain to confirm) ')) || 'no';
-			if (answer == domain) {
-				delete config.routes[domain];
-			} else {
-				console.log('Aborted');
-				return process.exit();
-			}
-		} else {
-			console.log('removed',$c.delete(config.routes[domain],{name: name}));
-			if ($c.isEmpty(config.routes[domain])) { delete config.routes[domain]; }
+		if (!~content.indexOf("{")) {
+			// this is a file
+			content = (yield fsread(content, 'utf8'))[1];
 		}
-		yield fswrite(configdir + "pconfig.json", JSON.stringify(config,null,4));
+		routes = $c.tryEval(content,JSON.parseAdvanced);
+		if (!routes) { return console.log('there is an issue with the json and cannot be parsed.'), process.exit(); }
+
+		for (var domain in routes) {
+			config.routes[domain] = config.routes[domain] || [];
+			if (!config.routes[domain].length) {
+				config.routes[domain] = routes[domain];
+				continue;
+			}
+			var append = $c.isNull(CL.index), iindex = parseInt(CL.index);
+			for (var i = 0, len = routes[domain].length; i < len; i++) {
+				var rt = routes[domain][i], index;
+				if (~(index = $c.indexOfAlt(config.routes[domain], rt.name, function(item) { return item.name; }))) {
+					var answer = yield question('A route named ' + rt.name + ' already exists. What do you want to do? (abort,merge,replace,skip) ');
+					if (!(answer in {replace: 1, skip: 1})) { return console.log('Aborted'), process.exit(); }
+					if (answer == 'skip') { continue; }
+					if (answer == 'replace') {
+						config.routes[domain][index] = rt;
+					} else if (answer == 'merge') {
+						$c.merge(config.routes[domain][index], rt);
+					} else { return console.log('Did not understand your response.  Aborting'), process.exit(); }
+
+				} else if (append) {
+					config.routes[domain] = config.routes[domain].concat(routes[domain]);
+				} else {
+					$c.insertAt(config.routes[domain], iindex++, rt);
+				}
+			}
+
+		}
+
+		yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
 		console.log('Complete');
-		process.exit();
-	});
+	} catch (e) { console.log(e); }
+	process.exit();
 }
-if (process.argv[REMOVESSL] == 'rmssl') {
+function* add () {
+//if (CL.CommandName == 'add') {
+	try {
+		var domain = CL.domain,
+			rts = {},
+			answers = {
+				name: CL.name,
+				domain: domain,
+				rhost: CL.host,
+				rport: CL.port,
+				rpathdestination: CL['destination-path'],
+				rpathreq: CL['request-path'],
+				enableauth: CL.user && CL.password ? "yes" : "",
+				auth_username: CL.user,
+				auth_password: CL.password,
+				access: CL.access,
+				has_headers: 'no',
+				headers: CL.header && $c.tryEval(CL.header),
+				allowed: CL['allowed-domain'],
+				verbs: CL['allowed-method']
+			};
+
+		yield* addRoute(null, rts, answers);
+		if ($c.isNull(CL.index)) {
+			config.routes[answers.domain] = config.routes[answers.domain] || [];
+			config.routes[answers.domain].push(rts[answers.domain][0]);
+		} else {
+			$c.insertAt(config.routes[answers.domain], CL.index, rts[answers.domain]);
+		}
+
+		yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+		console.log('Complete');
+	} catch (e) { console.log(e); }
+	process.exit();
+}
+function* addssl () {
+//if (CL.CommandName == 'addssl') {
+	var answers = {
+		key: CL.key,
+		domain: CL.domain,
+		cert: CL.cert,
+		ca: CL.authority
+	};
+	config.certs = config.certs || {};
+
+	yield* addSSL(null, config.certs, answers);
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* adduser () {
+//if (CL.CommandName == 'adduser') {
+	CL.validate();
+	var name = CL.name,
+		domains = (CL.domain || "").split(','),
+		username = CL.user, query = {};
+
+	if (!domains.length) {
+		var answer = (yield question('Are you sure you want to add this user to all routes in all domains? (no) ')) || 'no';
+		if (answer in yes) {
+			for (var d in config.routes) {
+				if (!config.routes.hasOwnProperty(d)) { continue; }
+				domains.push(d);
+			}
+		}
+		else { return console.log('Aborted'), process.exit(); }
+	}
+	if (CL.domain && !name) {
+		var answer = (yield question('Are you sure you want to add this user to all routes in ' + CL.domain + '? (no) ')) || 'no';
+		if (answer in no) { return console.log('Aborted'), process.exit(); }
+	} else if (name) { query = { name: name }; }
+
+
+	for (var i = 0, len = domains.length; i < len; i++) {
+		var routes = $c.where(config.routes[domains[i]], query);
+		for (var j = 0, jlen = routes.length; j < jlen; j++) {
+			var users = routes[j].http_users || (routes[j].http_users = {});
+			routes[j].http_auth = true;
+			if (users[username]) { console.log("skipping user because this user already exists in " + domains[i] + "/" + routes[j].name); }
+			else {
+				users[username] = {
+					"access": (CL.access || "*").split(','),
+					"password": encrypt_password(CL.password)
+				};
+			}
+
+		}
+	}
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* rm () {
+//if (CL.CommandName == 'rm') {
+	CL.validate();
+	var name = CL.name,
+		domain = CL.domain;
+	if (!name) {
+		var answer = (yield question('This cannot be undone. Are you sure you want to remove all routes for this domain? (type the domain to confirm) ')) || 'no';
+		if (answer == domain) { delete config.routes[domain];}
+		else { return console.log('Aborted'), process.exit(); }
+	} else {
+		if (!config) { return console.log('Craydent Proxy has not been initialized.  Please initialize before using other commands'), process.exit(); }
+		if (!config.routes) { return console.log('There are no routes defined.'), process.exit(); }
+		if (!config.routes[domain] || !config.routes[domain].length) { return console.log(domain + ' has no routes defined.'), process.exit(); }
+		console.log('removed', $c.delete(config.routes[domain], {name: name}));
+		if ($c.isEmpty(config.routes[domain])) {
+			delete config.routes[domain];
+		}
+	}
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config,null,4));
+	console.log('Complete');
+	process.exit();
+}
+function* rmssl () {
+//if (CL.CommandName == 'rmssl') {
+	CL.validate();
+	var domain = CL.domain;
+	config.certs = config.certs || {};
+	delete config.certs[domain];
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* rmuser () {
+//if (CL.CommandName == 'rmuser') {
+	CL.validate();
+	var route = yield check_user_action_prereq();
+
+	delete route.http_users[CL.user];
+	if ($c.isEmpty(route.http_users)) {
+		route.http_auth = false;
+	}
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* updateuser () {
+//if (CL.CommandName == 'updateuser') {
+	CL.validate();
+	var route = yield check_user_action_prereq();
+
+	route.http_users[CL.user].password = encrypt_password(CL.password);
+	route.http_users[CL.user].access = (CL.access || "*").split(',');
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* enabal_disable_auth () {
+//if (CL.CommandName == 'enableauth' || CL.CommandName == 'disableauth') {
+	var isenable = CL.CommandName == 'enableauth', actiontxt = isenable ? 'enable' : 'disable';
+	var name = CL.name,
+		domains = (CL.domain || "").split(',');
+
+	if (!domains.length) {
+		var answer = (yield question('Are you sure you want to ' + actiontxt + ' http auth to all routes in all domains? (no) ')) || 'no';
+		if (answer in yes) {
+			for (var d in config.routes) {
+				if (!config.routes.hasOwnProperty(d)) { continue; }
+				domains.push(d);
+			}
+		}
+		else { return console.log('Aborted'), process.exit(); }
+	}
+	if (CL.domain && !name) {
+		var answer = (yield question('Are you sure you want to ' + actiontxt + ' http auth to all routes in ' + CL.domain + '? (no) ')) || 'no';
+		if (answer in no) { return console.log('Aborted'), process.exit(); }
+	} else if (name) { query = { name: name }; }
+
+
+	for (var i = 0, len = domains.length; i < len; i++) {
+		$c.update(config.routes[domains[i]], query, {$set:{http_auth:isenable}});
+	}
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* stop () {
+//if (CL.CommandName == 'stop') {
+	yield CL.exec(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + " stop;");
+	process.exit();
+}
+function check_user_action_prereq () {
 	return $c.syncroit(function*() {
-		var domain = process.argv[DOMAIN];
-		config.certs = config.certs || {};
-		delete config.certs[domain];
+		var domain = CL.domain || (yield question('Which domain does this user belong to? ')),
+			name = CL.name || (yield question('Which route does this user belong to? ')),
+			username = CL.user;
 
-		yield fswrite(configdir + "pconfig.json", JSON.stringify(config, null, 4));
-		console.log('Complete');
-		process.exit();
+		if (!domain || ! name) { return console.log('You must provide a domain and route.'), console.log('Aborted'), process.exit(); }
+
+		var route = $c.where(config.routes[domain], {name: name})[0];
+		if (!route) { return console.log('Route ' + name + ' does not exists.'), console.log('Aborted'), process.exit(); }
+		if (!$c.getProperty(route,'http_users.' + username)) { return console.log('User ' + username + ' does not exists.'), console.log('Aborted'), process.exit(); }
+		return route;
 	});
 }
-if(process.argv[STOP] == 'stop') {
-	return $c.syncroit(function*(){
-		yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + " stop;");
-		process.exit();
-	});
-}
-
-if(config) {
-	return $c.syncroit(function*(){
-		yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
-		process.exit();
-	});
-}
-
 function* addRoute(domain, routes, answers){
 	answers = answers || {};
-	var name = answers.name || (yield question('Please name/provide an alias for this route: ')) || $c.cuid();
 	domain = answers.domain = answers.domain || (yield question('What is FQDN or IP for this route? '+(domain?'('+domain+'): ':''))) || domain;
+	var name = answers.name || (yield question('Please name/provide an alias for this route: ')) || $c.cuid(),
+		temp_rt = config && config.routes || routes || {};
+	while (temp_rt[domain] && $c.where(temp_rt[domain], {name: name}).length) {
+		console.log(name + " already exists in " + domain);
+		name = answers.name || (yield question('Please name/provide an alias for this route (or leave blank to generate a random name): ')) || $c.cuid()
+	}
+
 	var rhost = (answers.rhost || (yield question('What host will this route be forwarding to? (localhost): ')) || "localhost").split(',');
 	var rport = (answers.rport || (yield question('What port will this route be forwarding to? (80): ')) || "80").split(',');
 	var rpathdestination = answers.rpathdestination || (yield question('What path will this route be forwarding to? (/): ')) || '/';
 	var rpathreq = answers.rpathreq || (yield question('What outfacing path relative to the domain? (/): ')) || '/';
 
-	var enableAuth = (answers.enableauth || (yield question('Do you want to enable HTTP Basic Authentication? (no): '))) in yes,
-		auth_username, auth_password;
+	var enableAuth = (answers.enableauth || (yield question('Do you want to enable HTTP Basic Authentication? (no): ')) || "no") in yes,
+		auth = {};
 
 	if (enableAuth) {
-		auth_username = answers.auth_username || (yield question('What is the username? (admin): ')) || 'admin';
-		auth_password = answers.auth_password || (yield question('What is the password? (admin): ')) || 'admin';
+		var auth_usernames = (answers.auth_username || (yield question('What is the username? (admin): ')) || 'admin').split(','),
+			auth_passwords = (answers.auth_password || (yield question('What is the password? (admin): ')) || 'admin').split(','),
+			auth_access = ['*'];
+			//auth_access = (answers.access || (yield question('What can this user access? (*): ')) || '*').split(',');
+
+		for (var i = 0, len = auth_usernames.length; i < len; i++) {
+			auth[auth_usernames[i]] = { access: auth_access, password: encrypt_password(auth_passwords[i]) };
+		}
 	}
 	var headers = answers.headers || {};
 	var hasHeaders = answers.has_headers || (yield question('Are there any headers to overwrite with each request to this route? (no): ')) || "no";
@@ -243,8 +705,9 @@ function* addRoute(domain, routes, answers){
 		request_path: rpathreq,
 		domain: domain,
 		http_auth: enableAuth,
-		http_username: auth_username,
-		http_password: auth_password
+		http_users: auth
+		//http_username: auth_username,
+		//http_password: auth_password
 	};
 	console.log(route);
 	if (!(((yield question('Does this look good? (yes): ')) || "yes") in yes)) {
@@ -282,19 +745,23 @@ function* addSSL(domain, certs, answers) {
 	};
 	return certs;
 }
-
-$c.syncroit(function*() {
+function* init() {
+	if (CL.version === true) { return; }
+	if (config) {
+		yield CL.exec(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+		process.exit();
+	}
 	var answer;
-	var port = (process.argv[PORTS] || (yield question('What port should proxy run on? (80): ')) || 80).toString().split(',');
-	var host = (process.argv[HOSTS] ? (process.argv[HOSTS] == "*" ? "" : process.argv[HOSTS].toString()) : (yield question('What host can access this proxy? (*): '))).split(',');
-	var dhostport = (process.argv[DEFAULT] ? (process.argv[DEFAULT] == "*" ? "" : process.argv[DEFAULT].toString()) : (yield question('What is the default host/port to use? (localhost:8080): '))).split(':');
+	var port = (CL.port || (yield question('What port should proxy run on? (80): ')) || 80).toString().split(',');
+	var host = (CL.host ? (CL.host == "*" ? "" : CL.host.toString()) : (yield question('What host can access this proxy? (*): '))).split(',');
+	var dhostport = (CL.default ? (CL.default == "*" ? "" : CL.default.toString()) : (yield question('What is the default host/port to use? (localhost:8080): '))).split(':');
 	var dhost = dhostport[0] || "localhost";
 	var dport = dhostport[1] || "8080";
 
 	port.map(function(p){ return parseInt(p); });
 
 	var routes, content, certs;
-	if (content = process.argv[CONFIG]) {
+	if (content = CL['route-json']) {
 		if (content.indexOf("{") == -1) {
 			// this is a file
 			content = (yield fsread(content, 'utf8'))[1];
@@ -304,32 +771,36 @@ $c.syncroit(function*() {
 		if (!routes) { console.log('there is an issue with the json and cannot be parsed.'); }
 	}
 
+	var domain = CL.domain || "";
 	if (!routes) {
 		routes = {};
 		answer = (yield question('Do you want to configure routes now? (yes): ')) || "yes";
-		var domain = "";
+		var answers =  {domain: domain};
 		while (answer in yes) {
-			yield* addRoute(domain, routes);
+			yield* addRoute(domain, routes, answers);
 			answer = (yield question('Do you want to configure another route? (yes): ')) || "yes";
 		}
 	}
 
 	if (!certs) {
 		certs = {};
-		answer = (yield question('Do you want to add ssl certs now? (no): ')) || "no";
-		var domain = "";
-		while (answer in yes) {
-			yield* addSSL(domain, certs);
-			answer = (yield question('Do you want to add anther ssl cert? (yes): ')) || "yes";
+		if (CL.key || CL.cert || CL.authority) {
+			yield* addSSL(domain, certs, {domain: domain, key: CL.key, cert: CL.cert, ca: CL.authority});
+		} else {
+			answer = (yield question('Do you want to add ssl certs now? (no): ')) || "no";
+			while (answer in yes) {
+				yield* addSSL(domain, certs);
+				answer = (yield question('Do you want to add anther ssl cert? (yes): ')) || "yes";
+			}
 		}
 	}
-	var ncontent = JSON.stringify({host:host, port:port, certs:certs, routes:routes, DEFAULT:{ host:[dhost], port:[dport] } }, null, 4);
+	var ncontent = JSON.stringifyAdvanced({version:"1.0", host:host, port:port, certs:certs, routes:routes, DEFAULT:{ host:[dhost], port:[dport] } }, null, 4);
 
 	var dirpath = __dirname.replace('/bin','');
-	yield run("mkdir -p \"" + configdir + "\";");
+	yield CL.exec("mkdir -p \"" + configdir + "\";");
 	yield fswrite(configdir + "pconfig.json", ncontent);
-	yield run(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + dirpath + "/;");
+	yield CL.exec(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + dirpath + "/;");
 
 	console.log("Complete");
 	process.exit();
-});
+};

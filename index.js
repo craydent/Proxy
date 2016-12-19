@@ -1,10 +1,15 @@
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v1.0.0                              /*/
+/*/ Craydent LLC proxy-v1.1.2                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
 /*/---------------------------------------------------------/*/
-var $c = require('craydent/noConflict');
+
+const pkg = require('./package.json'),
+	ns = !pkg.name.indexOf('@craydent/') ? "@craydent/" : "";
+
+const $c = require(ns + 'craydent/noConflict');
+
 var Proxy = require('./proxy.js');
 function child (ccluster) {
 	var server = new Proxy();
