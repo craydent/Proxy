@@ -1,6 +1,6 @@
 <img src="http://craydent.com/JsonObjectEditor/img/svgs/craydent-logo.svg" width=75 height=75/>
 
-# Craydent Reverse Proxy 1.1.2
+# Craydent Reverse Proxy 1.2.0
 **by Clark Inada**
 
 This module is a reverse proxy server implemented in node.  There are 2 ways to use: global install/standalone or as a module.  When used as a standalone, a config file is create in /var/craydent/config/craydent-proxy/pconfig.json and will auto update the routes if the file is changed.  This happens as well when used as a module and a file is provided as a config.  This eliminates the need to restart the server for a configuration and/or route update.
@@ -29,11 +29,11 @@ cproxy version takes no arguments.  This will output the current verion of Crayd
 #### Initialize
 
 ```shell
-$ sudo cproxy '{{80,443}}' '*' '{{host:port}}' {{/var/path/to/route_definition.json}} {{/var/path/to/ssl.key}} {{/var/path/to/ssl.cert}} {{/var/path/to/ssl.ca}}
+$ sudo cproxy '{{80,443}}' '*' '{{host:port}}' {{/var/path/to/route_definition.json}} {{/var/path/to/ssl.key}} {{/var/path/to/ssl.cert}} {{/var/path/to/ssl.ca}} true
 
-$ sudo cproxy -p '{{80,443}}' -h '*' -e '{{host:port}}' -j {{/var/path/to/route_definition.json}} -k {{/var/path/to/ssl.key}} -c {{/var/path/to/ssl.cert}} -a {{/var/path/to/ssl.ca}}
+$ sudo cproxy -p '{{80,443}}' -h '*' -e '{{host:port}}' -j {{/var/path/to/route_definition.json}} -k {{/var/path/to/ssl.key}} -c {{/var/path/to/ssl.cert}} -a {{/var/path/to/ssl.ca}} -b
 
-$ sudo cproxy --port '{{80,443}}' --host '*' --default '{{host:port}}' --route-json {{/var/path/to/route_definition.json}} --key {{/var/path/to/ssl.key}} --cert {{/var/path/to/ssl.cert}} --authority {{/var/path/to/ssl.ca}}
+$ sudo cproxy --port '{{80,443}}' --host '*' --default '{{host:port}}' --route-json {{/var/path/to/route_definition.json}} --key {{/var/path/to/ssl.key}} --cert {{/var/path/to/ssl.cert}} --authority {{/var/path/to/ssl.ca}} --enable
 ```
 
 cproxy can take up to 7 arguments: ports, hosts, default host/port, and route_definition.json (file path or json string).  When arguments are missing, the CLI will ask a series of questions to obtain the missing arguments.
@@ -46,6 +46,7 @@ cproxy can take up to 7 arguments: ports, hosts, default host/port, and route_de
 6. key - private key (file path or string). (-k,--key)
 7. certificate - certificate (file path or string). (-c,--cert)
 8. certificate authority - certificate authority to check agains (file path or string). (-a,--authority)
+9. enable auto start - flag to add to boot. (-b,--enable)
 
 Note: routes are processed/matched in order.  If there are more hosts then ports (or vise versa) the last port that was provided is used. 
 
@@ -106,6 +107,30 @@ The first route configures the server to forward the request when a request is m
 `http://sub.example.com/websocket/index.html` will be forwarded to `http://localhost:3000/websocket/index.html` but will first check access via http authentication.
 The second route for sub.example.com configures all other requests to the server to forward to `http://craydent.com:8080`.  `http://sub.example.com/index.html` will be forwarded to `http://craydent.com:8080/home/index.html`.
 
+#### Enable auto start
+
+```shell
+$ sudo cproxy autostart -b
+
+$ sudo cproxy autostart --enable
+```
+
+cproxy autostart takes 1 argument.  This will enable auto start on reboot.
+
+1. enable auto start - flag to add to boot. (-b,--enable)
+
+#### Disable auto start
+
+```shell
+$ sudo cproxy autostart -s
+
+$ sudo cproxy autostart --disable
+```
+
+cproxy autostart takes 1 argument.  This will enable auto start on reboot.
+
+1. disable auto start - flag to remove from boot. (-s,--disable)
+
 #### Stop/Terminate
 
 ```shell
@@ -129,6 +154,63 @@ $ sudo cproxy uninstall
 ```
 
 cproxy uninstall takes no arguments.  This will remove configuration/log files and and uninstalled the global module.
+
+#### Add Host
+
+```shell
+$ sudo cproxy addhost  '{{host1,host2}}'
+
+$ sudo cproxy addhost -h '{{host1,host2}}'
+
+$ sudo cproxy addhost  --host '{{host1,host2}}'
+```
+
+cproxy addhost takes 1 argument. When argument is missing, the CLI will ask for the missing arguments.
+
+1. hosts - hosts the able to access proxy via TCP (comma delimit when multiple hosts). (-h,--host)
+
+#### Remove Host
+
+```shell
+$ sudo cproxy rmhost  '{{host1,host2}}'
+
+$ sudo cproxy rmhost -h '{{host1,host2}}'
+
+$ sudo cproxy rmhost  --host '{{host1,host2}}'
+```
+
+cproxy rmhost takes 1 argument. When argument is missing, the CLI will ask for the missing arguments.
+
+1. hosts - hosts the able to access proxy via TCP (comma delimit when multiple hosts). (-h,--host)
+
+#### Add Port & Protocol
+
+```shell
+$ sudo cproxy addlistener  '{{80,443}}' '{{http,https}}'
+
+$ sudo cproxy addlistener -p '{{80,443}}' -o '{{http,https}}'
+
+$ sudo cproxy addlistener  --port '{{80,443}}' --protocol '{{http,https}}'
+```
+
+cproxy addhost takes up to 2 arguments. When arguments are missing, the CLI will ask a series of questions to obtain the missing arguments.
+
+1. ports - ports the proxy will listen on (comma delimit when multiple ports). (-p,--port)
+2. protocol - protocol for these ports (comma delimit when multiple protocols). (-o,--protocol)
+
+#### Remove Port & Protocol
+
+```shell
+$ sudo cproxy rmlistener  '{{80,443}}'
+
+$ sudo cproxy rmlistener -p '{{80,443}}'
+
+$ sudo cproxy rmlistener  --port '{{80,443}}'
+```
+
+cproxy rmlistener takes 1 argument. When argument is missing, the CLI will ask for the missing arguments.
+
+1. ports - ports the proxy to remove (comma delimit when multiple ports). (-p,--port)
 
 #### Add Route
 
@@ -197,7 +279,7 @@ $ sudo cproxy load -j '{{/var/path/to/route_definition.json}}' -i '{{route index
 $ sudo cproxy load  --route-json '{{/var/path/to/route_definition.json}}' --index '{{route index(default:adds at the end)}}'
 ```
 
-cproxy load takes upt to 2 arguments. When arguments are missing, the CLI will ask a series of questions to obtain the missing arguments.
+cproxy load takes up to 2 arguments. When arguments are missing, the CLI will ask a series of questions to obtain the missing arguments.
 
 1. route definition - json file (absolute path) or string defining the routes to initialize proxy with. Example json is shown below:  (-j,--route-json)
 2. route index - precedence index to insert in routes array. (-i,--index)

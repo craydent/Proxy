@@ -1,0 +1,62 @@
+#!/bin/sh
+#/*/---------------------------------------------------------/*/
+#/*/ Craydent LLC cproxy-v1.2.0                              /*/
+#/*/ Copyright 2011 (http://craydent.com/about)              /*/
+#/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
+#/*/ (http://craydent.com/license)                           /*/
+#/*/---------------------------------------------------------/*/
+#/*/---------------------------------------------------------/*/
+
+# chkconfig: 35 99 99
+# description: Craydent Proxy
+
+. /etc/rc.d/init.d/functions
+
+USER="root"
+
+DAEMON="node"
+
+SERVER="/usr/local/lib/node_modules/craydent-proxy/index.js"
+
+LOCK_FILE="/var/craydent/lock/craydent-proxy"
+
+do_start()
+{
+        if [ ! -f "$LOCK_FILE" ] ; then
+                echo -n $"Starting $SERVER: "
+                runuser -l "$USER" -c "cproxy &" && echo_success || echo_failure
+                RETVAL=$?
+                echo
+                [ $RETVAL -eq 0 ] && touch $LOCK_FILE
+        else
+                echo "$SERVER is locked."
+                RETVAL=1
+        fi
+}
+do_stop()
+{
+        echo -n $"Stopping cproxy: "
+        pid=`ps -aefw | grep "$DAEMON $SERVER" | grep -v " grep " | awk '{print $2}'`
+        kill -9 $pid > /dev/null 2>&1 && echo_success || echo_failure
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f $LOCK_FILE
+}
+
+case "$1" in
+        start)
+                do_start
+                ;;
+        stop)
+                do_stop
+                ;;
+        restart)
+                do_stop
+                do_start
+                ;;
+        *)
+                echo "Usage: $0 {start|stop|restart}"
+                RETVAL=1
+esac
+
+exit $RETVAL

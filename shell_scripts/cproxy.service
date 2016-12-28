@@ -1,0 +1,21 @@
+#/*/---------------------------------------------------------/*/
+#/*/ Craydent LLC cproxy-v1.2.0                              /*/
+#/*/ Copyright 2011 (http://craydent.com/about)              /*/
+#/*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
+#/*/ (http://craydent.com/license)                           /*/
+#/*/---------------------------------------------------------/*/
+#/*/---------------------------------------------------------/*/
+[Unit]
+Description=Craydent Proxy Server
+#Requires=After=mysql.service       # Requires the mysql service to run first
+
+[Service]
+ExecStart=/usr/local/bin/cproxy
+Restart=always
+RestartSec=3
+StandardOutput=/var/craydent/log/craydent-proxy/index.js.log
+StandardError=/var/craydent/log/craydent-proxy/index.js.log
+SyslogIdentifier=craydent-proxy
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*/---------------------------------------------------------/*/
-/*/ Craydent LLC proxy-v1.1.2                               /*/
+/*/ Craydent LLC proxy-v1.2.0                               /*/
 /*/ Copyright 2011 (http://craydent.com/about)              /*/
 /*/ Dual licensed under the MIT or GPL Version 2 licenses.  /*/
 /*/ (http://craydent.com/license)                           /*/
@@ -66,8 +66,12 @@ const $c = require(ns + 'craydent/noConflict'),
 		output: process.stdout
 	}),
 	question = $c.yieldable(rl.question, rl),
+	run = $c.CLI.exec,
 	yes = {yes: 1, y: 1},
-	no = {no: 1, n: 1};
+	no = {no: 1, n: 1},
+	SCRIPT_PATH =  __dirname + "/../shell_scripts/",
+	AUTO_START_SCRIPT = SCRIPT_PATH + "add_auto_start.sh " + SCRIPT_PATH,
+	AUTO_START_DISABLE_SCRIPT = SCRIPT_PATH + "rm_auto_start.sh";
 
 var utils = require('../libs/utils'),
 	encrypt_password = utils.encrypt_password,
@@ -110,6 +114,40 @@ CL
 		description:"[d]omain where the route exists."
 	}]).
 		action(rmssl);
+
+CL
+// port/protocol commands
+	.command("addlistener",[{
+		option: "-p,--port",
+		type:"string",
+		description:"[p]orts the proxy will listen on (comma delimit when multiple ports)."
+	}, {
+		option: "-o,--protocol",
+		type:"string",
+		description:"pr[o]tocol for these ports (comma delimit when multiple protocols)."
+	}]).
+		action(addlistener)
+	.command("rmlistener",[{
+		option: "-p,--port",
+		type:"string",
+		description:"[p]orts the proxy will listen on (comma delimit when multiple ports)."
+	}]).
+		action(rmlistener);
+
+CL
+// host commands
+	.command("addhost",[{
+		option: "-h,--host",
+		type:"string",
+		description:"[h]osts the able to access proxy via TCP (comma delimit when multiple hosts)."
+	}]).
+		action(addhost)
+	.command("rmhost",[{
+		option: "-h,--host",
+		type:"string",
+		description:"[h]osts the able to access proxy via TCP (comma delimit when multiple hosts)."
+	}]).
+		action(rmhost);
 
 CL
 // add command options
@@ -270,7 +308,17 @@ CL
 		type:"string",
 		description:"[n]ame/alias for the route."
 	}]).
-		action(enabal_disable_auth);
+		action(enabal_disable_auth)
+	.command("autostart",[{
+		option: "-b,--enable",
+		type:"string",
+		description:"ena[b]le autostart."
+	}, {
+		option: "-s,--disable",
+		type:"string",
+		description:"di[s]able autostart."
+	}]).
+		action(enable_disable_autostart);
 
 CL
 // general commands and options
@@ -357,6 +405,11 @@ CL
 		option: "-a,--authority",
 		type:"string",
 		description:"ssl certificate [a]uthority to check against."
+	})
+	.add({
+		option: "-b,--enable",
+		type:"string",
+		description:"ena[b]le autostart."
 	})
 	.add({
 		option: "-v,--version",
@@ -504,6 +557,52 @@ function* addssl () {
 	console.log('Complete');
 	process.exit();
 }
+function* addlistener () {
+	var port = CL.port,
+		protocol = CL.protocol || "";
+
+	if (!port) {
+		var answer = (yield question('What port do you want to add? '));
+		if (!answer) { return console.log('A port must be provided'), process.exit(); }
+	}
+	port = port.split(',');
+	protocol = protocol ? protocol.split(',') : [];
+
+	for (var i = 0, len = port.length; i < len; i++) {
+		var index;
+		if (~(index = config.port.indexOf(port[i]))) {
+			config.protocol[index] = protocol[i] || config.protocol[index];
+		} else {
+			config.protocol[config.port.length] = protocol[i];
+			config.port.push(port[i]);
+		}
+	}
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* addhost () {
+	var host = CL.host;
+
+	if (!host) {
+		var answer = (yield question('What host do you want to add? '));
+		if (!answer) { return console.log('A host must be provided'), process.exit(); }
+	}
+	host = host.split(',');
+
+	for (var i = 0, len = host.length; i < len; i++) {
+		if (~config.host.indexOf(host[i])) {
+			console.log("Skipped: host " + host[i] + " already exists.");
+			continue;
+		}
+		config.host.push(host[i]);
+	}
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
 function* adduser () {
 //if (CL.CommandName == 'adduser') {
 	CL.validate();
@@ -580,6 +679,51 @@ function* rmssl () {
 	console.log('Complete');
 	process.exit();
 }
+function* rmlistener () {
+	var port = CL.port;
+
+	if (!port) {
+		var answer = (yield question('What port do you want to remove? '));
+		if (!answer) { return console.log('A port must be provided'), process.exit(); }
+	}
+	port = port.split(',');
+
+	for (var i = 0, len = port.length; i < len; i++) {
+		var index;
+		if (!~(index = config.port.indexOf(port[i]))) {
+			console.log("Skipped: port " + port[i] + " does not exists.");
+			continue;
+		}
+		$c.removeAt(config.port, index);
+		$c.removeAt(config.protocol, index);
+	}
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
+function* rmhost () {
+	var host = CL.host;
+
+	if (!host) {
+		var answer = (yield question('What host do you want to remove? '));
+		if (!answer) { return console.log('A host must be provided'), process.exit(); }
+	}
+	host = host.split(',');
+
+	for (var i = 0, len = host.length; i < len; i++) {
+		var index;
+		if (!~(index = config.host.indexOf(host[i]))) {
+			console.log("Skipped: host " + host[i] + " does not exists.");
+			continue;
+		}
+		$c.removeAt(config.host, index);
+	}
+
+	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
+	console.log('Complete');
+	process.exit();
+}
 function* rmuser () {
 //if (CL.CommandName == 'rmuser') {
 	CL.validate();
@@ -634,6 +778,26 @@ function* enabal_disable_auth () {
 	yield fswrite(configdir + "pconfig.json", JSON.stringifyAdvanced(config, null, 4));
 	console.log('Complete');
 	process.exit();
+}
+function* enable_disable_autostart (command, fromInit) {
+	if ($c.isNull(CL.enable) && $c.isNull(CL.disable)) {
+		var answer = (yield question('Would you like to enable auto start? (yes) ')) || 'yes';
+		if (answer in yes) {
+			CL.enable = true;
+		}
+	} else if (CL.disable) {
+		CL.enable = false;
+	}
+
+	if (CL.enable) {
+		yield run(AUTO_START_SCRIPT);
+	} else {
+		yield run(AUTO_START_DISABLE_SCRIPT);
+	}
+	if (!fromInit) {
+		console.log('Complete');
+		process.exit();
+	}
 }
 function* stop () {
 //if (CL.CommandName == 'stop') {
@@ -757,8 +921,9 @@ function* init() {
 	var dhostport = (CL.default ? (CL.default == "*" ? "" : CL.default.toString()) : (yield question('What is the default host/port to use? (localhost:8080): '))).split(':');
 	var dhost = dhostport[0] || "localhost";
 	var dport = dhostport[1] || "8080";
+	var protocol = [];
 
-	port.map(function(p){ return parseInt(p); });
+	port.map(function(p){ if (port == "80") { protocol.push('http'); } else if (port == "443") { protocol.push('https'); } return parseInt(p); });
 
 	var routes, content, certs;
 	if (content = CL['route-json']) {
@@ -794,6 +959,11 @@ function* init() {
 			}
 		}
 	}
+
+	//--------add deploy service to boot
+	yield* enable_disable_autostart(null, true);
+	//--------end add deploy service to boot
+
 	var ncontent = JSON.stringifyAdvanced({version:"1.0", host:host, port:port, certs:certs, routes:routes, DEFAULT:{ host:[dhost], port:[dport] } }, null, 4);
 
 	var dirpath = __dirname.replace('/bin','');
@@ -803,4 +973,4 @@ function* init() {
 
 	console.log("Complete");
 	process.exit();
-};
+}
