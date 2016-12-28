@@ -70,6 +70,8 @@ const $c = require(ns + 'craydent/noConflict'),
 	yes = {yes: 1, y: 1},
 	no = {no: 1, n: 1},
 	SCRIPT_PATH =  __dirname + "/../shell_scripts/",
+	RESET_SCRIPT = SCRIPT_PATH + "reset_script.sh ",
+	NODE_SCRIPT = SCRIPT_PATH + "node_script.sh ",
 	AUTO_START_SCRIPT = SCRIPT_PATH + "add_auto_start.sh " + SCRIPT_PATH,
 	AUTO_START_DISABLE_SCRIPT = SCRIPT_PATH + "rm_auto_start.sh";
 
@@ -437,13 +439,15 @@ function version () {
 }
 function* reset () {
 //if (CL.CommandName == 'reset') {
-	yield CL.exec(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+	yield CL.exec(RESET_SCRIPT + " " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
 	console.log('Complete');
 	process.exit();
 }
 function* uninstall () {
 //if (CL.CommandName == 'uninstall') {
-	yield CL.exec(__dirname + "/reset_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+	yield CL.exec(RESET_SCRIPT + " " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+	CL.disable = true;
+	yield* enable_disable_autostart(null, true);
 	yield CL.exec("npm uninstall -g " + pkg.name + ";");
 	console.log('Complete');
 	process.exit();
@@ -801,7 +805,7 @@ function* enable_disable_autostart (command, fromInit) {
 }
 function* stop () {
 //if (CL.CommandName == 'stop') {
-	yield CL.exec(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + " stop;");
+	yield CL.exec(NODE_SCRIPT + " " + projectname + " \"index.js\" " + __dirname.replace('bin','') + " stop;");
 	process.exit();
 }
 function check_user_action_prereq () {
@@ -912,7 +916,7 @@ function* addSSL(domain, certs, answers) {
 function* init() {
 	if (CL.version === true) { return; }
 	if (config) {
-		yield CL.exec(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
+		yield CL.exec(NODE_SCRIPT + " " + projectname + " \"index.js\" " + __dirname.replace('bin','') + ";");
 		process.exit();
 	}
 	var answer;
@@ -969,7 +973,7 @@ function* init() {
 	var dirpath = __dirname.replace('/bin','');
 	yield CL.exec("mkdir -p \"" + configdir + "\";");
 	yield fswrite(configdir + "pconfig.json", ncontent);
-	yield CL.exec(__dirname + "/node_script.sh " + projectname + " \"index.js\" " + dirpath + "/;");
+	yield CL.exec(NODE_SCRIPT + " " + projectname + " \"index.js\" " + dirpath + "/;");
 
 	console.log("Complete");
 	process.exit();
